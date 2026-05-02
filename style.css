@@ -124,10 +124,6 @@ main {
   text-transform: uppercase;
 }
 
-.combo-header.best {
-  background: var(--green);
-  color: var(--white);
-}
 
 .combo-body {
   padding: 10px 14px 14px;

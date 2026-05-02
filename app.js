@@ -141,7 +141,6 @@ function regenerateCombinations() {
   };
   build(0, []);
 
-  combos.sort((a, b) => a.score - b.score);
   state.combinations = combos;
 }
 
@@ -251,8 +250,8 @@ function renderCourts() {
   state.combinations.forEach((combo, idx) => {
     const card = el('div', 'combo-card');
 
-    const header = el('div', `combo-header${idx === 0 ? ' best' : ''}`);
-    header.textContent = idx === 0 ? '推奨' : `パターン ${idx + 1}`;
+    const header = el('div', 'combo-header');
+    header.textContent = `パターン ${idx + 1}`;
     card.appendChild(header);
 
     const body = el('div', 'combo-body');
