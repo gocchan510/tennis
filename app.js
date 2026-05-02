@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 8:10';
-const VERSION_NOTES = 'PWAインストール対応（manifest修正）';
+const APP_VERSION = '2026/5/3 8:30';
+const VERSION_NOTES = 'Androidバックボタン対応';
 
 // ── State ─────────────────────────────────────────
 //
@@ -720,15 +720,38 @@ function render() {
 
 // ── Navigation ────────────────────────────────────
 
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  document.querySelector(`.nav-btn[data-view="${view}"]`).classList.add('active');
+}
+
 function setupNav() {
+  // Seed history with main so there's always something to pop back to.
+  history.replaceState({ view: 'main' }, '');
+
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.view;
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(`view-${view}`).classList.add('active');
-      btn.classList.add('active');
+      if (view !== 'main') history.pushState({ view }, '');
+      else history.replaceState({ view: 'main' }, '');
+      switchView(view);
     });
+  });
+
+  window.addEventListener('popstate', (e) => {
+    // Priority 1: close open picker popup
+    const popup = document.querySelector('.setup-popup');
+    if (popup) {
+      popup.remove();
+      history.pushState({ view: 'main' }, '');
+      return;
+    }
+    // Priority 2: return to main tab
+    const view = e.state?.view ?? 'main';
+    switchView(view);
+    if (view !== 'main') history.replaceState({ view: 'main' }, '');
   });
 }
 
