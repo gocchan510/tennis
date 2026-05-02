@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 2:20';
-const VERSION_NOTES = 'アプリ名を「球縁」に改名';
+const APP_VERSION = '2026/5/3 2:45';
+const VERSION_NOTES = '待機中セクション統合・参加チップに次試合インジケーター';
 
 // ── State ─────────────────────────────────────────
 //
@@ -481,10 +481,7 @@ function renderCourts() {
   const container = document.getElementById('courts');
   container.innerHTML = '';
 
-  if (!state.sessionStarted) {
-    document.getElementById('waiting-section').classList.add('hidden');
-    return;
-  }
+  if (!state.sessionStarted) return;
 
   const active = activePlayers();
 
@@ -492,15 +489,8 @@ function renderCourts() {
     const msg = el('div', 'no-match-msg');
     msg.textContent = '4人以上参加するとコートが表示されます';
     container.appendChild(msg);
-    renderWaiting(new Set());
     return;
   }
-
-  // The "next" un-played match drives the waiting list.
-  const nextIdx = state.markerPos;
-  const allIds = nextIdx < state.combinations.length
-    ? new Set(state.combinations[nextIdx].courts.flatMap(m => [...m.team1, ...m.team2]))
-    : new Set();
 
   state.combinations.forEach((combo, idx) => {
     const card = el('div', 'combo-card');
@@ -525,8 +515,6 @@ function renderCourts() {
   container.appendChild(marker);
   setupMarkerDrag(marker, handle);
   requestAnimationFrame(() => updateMarkerPosition());
-
-  renderWaiting(allIds);
 }
 
 // ── Progress marker ──────────────────────────────
@@ -603,29 +591,6 @@ function setupMarkerDrag(marker, handle) {
   handle.addEventListener('pointercancel', finish);
 }
 
-function renderWaiting(inMatchIds) {
-  const section = document.getElementById('waiting-section');
-  const list = document.getElementById('waiting-list');
-  const waiting = activePlayers().filter(p => !inMatchIds.has(p.id));
-
-  if (waiting.length === 0) {
-    section.classList.add('hidden');
-    return;
-  }
-
-  list.innerHTML = '';
-  waiting.forEach(p => {
-    const chip = el('div', 'chip waiting-chip');
-    const id = el('span', 'chip-id');
-    id.textContent = String(p.id);
-    const games = el('span', 'chip-games');
-    games.textContent = `${p.actualGames ?? p.games}試合`;
-    chip.append(id, games);
-    list.appendChild(chip);
-  });
-  section.classList.remove('hidden');
-}
-
 // ── Render: setup screen ─────────────────────────
 
 function renderSetup() {
@@ -653,6 +618,17 @@ function makeAddChip() {
   return chip;
 }
 
+function nextMatchCourtForPlayer() {
+  // Returns Map<playerId, courtNumber> for players in the upcoming combo.
+  const result = new Map();
+  const combo = state.combinations[state.markerPos];
+  if (!combo) return result;
+  for (const m of combo.courts) {
+    for (const id of [...m.team1, ...m.team2]) result.set(id, m.court);
+  }
+  return result;
+}
+
 function renderPlayers() {
   const list = document.getElementById('players-list');
   const countEl = document.getElementById('player-count');
@@ -664,10 +640,33 @@ function renderPlayers() {
     return;
   }
 
-  all.forEach(p => list.appendChild(makeChip(p)));
+  const courtMap = nextMatchCourtForPlayer();
+  const showCourtNum = (state.maxCourts ?? 1) >= 2;
+
+  all.forEach(p => {
+    const chip = makeChip(p);
+    if (p.active) {
+      if (courtMap.has(p.id)) {
+        chip.classList.add('chip-up');
+        if (showCourtNum) {
+          const tag = el('span', 'chip-court');
+          tag.textContent = String(courtMap.get(p.id));
+          chip.appendChild(tag);
+        }
+      } else {
+        chip.classList.add('chip-rest');
+      }
+    }
+    list.appendChild(chip);
+  });
   list.appendChild(makeAddChip());
+
   const activeCount = all.filter(p => p.active).length;
-  countEl.textContent = `参加中 ${activeCount}人`;
+  const upCount = courtMap.size;
+  const restCount = activeCount - upCount;
+  countEl.textContent = restCount > 0
+    ? `次 ${upCount} ／ 待機 ${restCount}`
+    : `参加 ${activeCount}人`;
 }
 
 // ── Render: stats ─────────────────────────────────
