@@ -1,11 +1,12 @@
 'use strict';
 
 const STORAGE_KEY = 'tennis_v1';
+const MAX_COMBOS = 50;
 
 // ── State ─────────────────────────────────────────
 //
 // players:      { [id]: { id, games, active, pairs: {[id]: n}, opponents: {[id]: n} } }
-// combinations: [{ courts: [{court, team1:[id,id], team2:[id,id]}], score }]
+// combinations: [{ courts: [{court, team1:[id,id], team2:[id,id]}] }]
 
 let state = { players: {}, nextId: 1, combinations: [], maxCourts: 1, sessionStarted: false };
 
@@ -64,85 +65,86 @@ function activePlayers() {
 
 // ── Combination generation ────────────────────────
 
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+// Priority pool: expand tiers (fewest games first) until we have enough players.
+function buildPool(active, numCourts) {
+  const needed = numCourts * 4;
+  const sorted = [...active].sort((a, b) => a.games - b.games || a.id - b.id);
+  if (sorted.length < needed) return [];
+
+  const pool = [];
+  let i = 0;
+  while (pool.length < needed && i < sorted.length) {
+    const tier = sorted[i].games;
+    while (i < sorted.length && sorted[i].games === tier) pool.push(sorted[i++]);
   }
-  return a;
+  return pool.sort((a, b) => a.id - b.id);
 }
 
-function pickByPriority(players, n) {
-  const byGames = {};
-  for (const p of players) {
-    (byGames[p.games] ??= []).push(p);
-  }
-  const result = [];
-  for (const g of Object.keys(byGames).map(Number).sort((a, b) => a - b)) {
-    for (const p of shuffle(byGames[g])) {
-      result.push(p);
-      if (result.length >= n) return result;
-    }
-  }
-  return result;
+// Generator: choose k items from arr (yields arrays of objects).
+function* choose(arr, k) {
+  if (k === 0) { yield []; return; }
+  if (arr.length < k) return;
+  const [head, ...tail] = arr;
+  for (const rest of choose(tail, k - 1)) yield [head, ...rest];
+  yield* choose(tail, k);
 }
 
-function scorePairing(p1, p2, p3, p4) {
-  const pair =
-    (p1.pairs[p2.id] ?? 0) +
-    (p3.pairs[p4.id] ?? 0);
-  const opp =
-    (p1.opponents[p3.id] ?? 0) + (p1.opponents[p4.id] ?? 0) +
-    (p2.opponents[p3.id] ?? 0) + (p2.opponents[p4.id] ?? 0);
-  return pair * 3 + opp;
-}
-
-// Returns all 3 pairings for a group of 4 players, with scores.
-function allPairings(group) {
+// All 3 pairings for a group of 4 players.
+function pairingOpts(group) {
   const [a, b, c, d] = group;
   return [
-    { team1: [a.id, b.id], team2: [c.id, d.id], score: scorePairing(a, b, c, d) },
-    { team1: [a.id, c.id], team2: [b.id, d.id], score: scorePairing(a, c, b, d) },
-    { team1: [a.id, d.id], team2: [b.id, c.id], score: scorePairing(a, d, b, c) },
+    { team1: [a.id, b.id], team2: [c.id, d.id] },
+    { team1: [a.id, c.id], team2: [b.id, d.id] },
+    { team1: [a.id, d.id], team2: [b.id, c.id] },
   ];
+}
+
+// Generator: all 1-court combinations from pool.
+function* gen1Court(pool) {
+  for (const group of choose(pool, 4)) {
+    for (const { team1, team2 } of pairingOpts(group)) {
+      yield { courts: [{ court: 1, team1, team2 }] };
+    }
+  }
+}
+
+// Generator: all 2-court combinations from pool.
+// Fix: smallest-ID player always goes to court 1 to avoid duplicate splits.
+function* gen2Courts(pool) {
+  const [anchor, ...rest] = pool;
+  for (const trio of choose(rest, 3)) {
+    const court1 = [anchor, ...trio].sort((a, b) => a.id - b.id);
+    const c1ids = new Set(court1.map(p => p.id));
+    const remaining = pool.filter(p => !c1ids.has(p.id));
+    for (const court2 of choose(remaining, 4)) {
+      for (const p1 of pairingOpts(court1)) {
+        for (const p2 of pairingOpts(court2)) {
+          yield {
+            courts: [
+              { court: 1, team1: p1.team1, team2: p1.team2 },
+              { court: 2, team1: p2.team1, team2: p2.team2 },
+            ],
+          };
+        }
+      }
+    }
+  }
 }
 
 function regenerateCombinations() {
   const active = activePlayers();
-  const max = state.maxCourts ?? 1;
-  const numCourts = Math.min(Math.floor(active.length / 4), max);
+  const numCourts = Math.min(state.maxCourts ?? 1, Math.floor(active.length / 4));
   state.combinations = [];
   if (!numCourts) return;
 
-  const selected = pickByPriority(active, numCourts * 4)
-    .sort((a, b) => a.id - b.id);
+  const pool = buildPool(active, numCourts);
+  if (pool.length < numCourts * 4) return;
 
-  // All pairings per court slot
-  const courtOptions = [];
-  for (let c = 0; c < numCourts; c++) {
-    const group = selected.slice(c * 4, c * 4 + 4);
-    courtOptions.push(
-      allPairings(group).map(p => ({ court: c + 1, team1: p.team1, team2: p.team2, score: p.score }))
-    );
+  const gen = numCourts === 1 ? gen1Court(pool) : gen2Courts(pool);
+  for (const combo of gen) {
+    state.combinations.push(combo);
+    if (state.combinations.length >= MAX_COMBOS) break;
   }
-
-  // Cross product across courts
-  const combos = [];
-  const build = (idx, current) => {
-    if (idx === courtOptions.length) {
-      const score = current.reduce((s, c) => s + c.score, 0);
-      combos.push({
-        courts: current.map(({ score: _s, ...rest }) => rest),
-        score,
-      });
-      return;
-    }
-    for (const opt of courtOptions[idx]) build(idx + 1, [...current, opt]);
-  };
-  build(0, []);
-
-  state.combinations = combos;
 }
 
 // ── Record a combination ──────────────────────────
@@ -164,10 +166,8 @@ function recordCombination(idx) {
     const [p1, p2] = match.team1.map(id => state.players[id]);
     const [p3, p4] = match.team2.map(id => state.players[id]);
     if (!p1 || !p2 || !p3 || !p4) continue;
-
     for (const p of [p1, p2, p3, p4]) p.games++;
-    inc(p1, p2);
-    inc(p3, p4);
+    inc(p1, p2); inc(p3, p4);
     incOpp(p1, p3); incOpp(p1, p4);
     incOpp(p2, p3); incOpp(p2, p4);
   }
