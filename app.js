@@ -2,7 +2,7 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2';
+const APP_VERSION = '2026/5/2 20:22';
 const VERSION_NOTES = '公平スケジューリング・全組み合わせ表示';
 
 // ── State ─────────────────────────────────────────
