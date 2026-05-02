@@ -1,13 +1,13 @@
 'use strict';
 
-const CACHE = 'tennis-2026-05-03-0800';
+const CACHE = 'tennis-2026-05-03-0810';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/icon.svg',
+  '/tennis/',
+  '/tennis/index.html',
+  '/tennis/style.css',
+  '/tennis/app.js',
+  '/tennis/manifest.json',
+  '/tennis/icon.svg',
 ];
 
 self.addEventListener('install', e => {

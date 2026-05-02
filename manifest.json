@@ -2,7 +2,8 @@
   "name": "球縁",
   "short_name": "球縁",
   "description": "テニスダブルスの組み合わせを管理するアプリ",
-  "start_url": "/",
+  "start_url": "/tennis/",
+  "scope": "/tennis/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FAF7F0",
@@ -12,7 +13,13 @@
       "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }
