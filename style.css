@@ -510,32 +510,6 @@ main {
   text-decoration-thickness: 1px;
 }
 
-/* Player in the upcoming match — brass-highlighted */
-.chip.chip-up {
-  background: var(--surface);
-  border-color: var(--brass);
-  box-shadow:
-    0 0 0 3px var(--brass-soft),
-    0 1px 2px rgba(20,30,25,0.06);
-}
-.chip.chip-up .chip-id { color: var(--court-deep); }
-
-/* Tiny court number tag for 2-court mode (next-match chips only) */
-.chip-court {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 5px;
-  border-radius: 8px;
-  background: var(--court);
-  color: var(--brass-light);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  font-family: var(--font-display);
-}
 
 .chip.add-chip {
   background: linear-gradient(135deg, var(--brass-light) 0%, var(--brass) 100%);

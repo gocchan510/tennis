@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 2:55';
-const VERSION_NOTES = '待機表記を削除、ヘッダーは参加人数のみ';
+const APP_VERSION = '2026/5/3 3:00';
+const VERSION_NOTES = '次試合のハイライトも廃止、チップは状態表示なし';
 
 // ── State ─────────────────────────────────────────
 //
@@ -618,17 +618,6 @@ function makeAddChip() {
   return chip;
 }
 
-function nextMatchCourtForPlayer() {
-  // Returns Map<playerId, courtNumber> for players in the upcoming combo.
-  const result = new Map();
-  const combo = state.combinations[state.markerPos];
-  if (!combo) return result;
-  for (const m of combo.courts) {
-    for (const id of [...m.team1, ...m.team2]) result.set(id, m.court);
-  }
-  return result;
-}
-
 function renderPlayers() {
   const list = document.getElementById('players-list');
   const countEl = document.getElementById('player-count');
@@ -640,21 +629,7 @@ function renderPlayers() {
     return;
   }
 
-  const courtMap = nextMatchCourtForPlayer();
-  const showCourtNum = (state.maxCourts ?? 1) >= 2;
-
-  all.forEach(p => {
-    const chip = makeChip(p);
-    if (p.active && courtMap.has(p.id)) {
-      chip.classList.add('chip-up');
-      if (showCourtNum) {
-        const tag = el('span', 'chip-court');
-        tag.textContent = String(courtMap.get(p.id));
-        chip.appendChild(tag);
-      }
-    }
-    list.appendChild(chip);
-  });
+  all.forEach(p => list.appendChild(makeChip(p)));
   list.appendChild(makeAddChip());
 
   const activeCount = all.filter(p => p.active).length;
