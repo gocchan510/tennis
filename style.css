@@ -740,30 +740,33 @@ main {
 }
 
 .setup-input {
-  width: 120px;
+  width: 130px;
   height: 64px;
   border: 1.5px solid var(--court);
   border-radius: var(--radius);
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 600;
   text-align: center;
+  text-align-last: center;
   color: var(--court-deep);
-  background: var(--surface);
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23B8975A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 14px) center;
+  background-size: 12px auto;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   outline: none;
-  -moz-appearance: textfield;
+  cursor: pointer;
   letter-spacing: 0.02em;
+  padding: 0 28px 0 22px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.setup-input::-webkit-inner-spin-button,
-.setup-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 .setup-input:focus {
   border-color: var(--court-deep);
   box-shadow: 0 0 0 4px rgba(31,74,44,0.10);
-}
-.setup-input::placeholder {
-  color: var(--ink-faint);
-  font-weight: 400;
 }
 
 .setup-unit {

@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 3:35';
-const VERSION_NOTES = '行タップでマーカーをそこに移動できるように';
+const APP_VERSION = '2026/5/3 3:55';
+const VERSION_NOTES = '参加人数をプルダウンに（1〜20人）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -749,6 +749,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStart = document.getElementById('btn-start');
   let selectedCourts = 1;
 
+  // Populate the player count dropdown (1〜20).
+  for (let i = 1; i <= 20; i++) {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = String(i);
+    input.appendChild(opt);
+  }
+
   document.querySelectorAll('.court-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.court-toggle-btn').forEach(b => b.classList.remove('active'));
@@ -759,22 +767,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const validate = () => {
     const v = parseInt(input.value, 10);
-    btnStart.disabled = !(v >= 1 && v <= 99);
+    btnStart.disabled = !(v >= 1 && v <= 20);
   };
-  input.addEventListener('input', validate);
+  input.addEventListener('change', validate);
   validate();
 
   btnStart.addEventListener('click', () => {
     const count = parseInt(input.value, 10);
-    if (count >= 1 && count <= 99) {
+    if (count >= 1 && count <= 20) {
       input.value = '';
       validate();
       initPlayers(count, selectedCourts);
     }
-  });
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !btnStart.disabled) btnStart.click();
   });
 
   if ('serviceWorker' in navigator) {
