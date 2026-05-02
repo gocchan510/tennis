@@ -14,6 +14,7 @@
   --radius:       14px;
   --nav-h:        60px;
   --header-h:     56px;
+  --players-h:    96px;
 }
 
 *, *::before, *::after {
@@ -99,7 +100,7 @@ html, body {
 main {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 14px calc(var(--nav-h) + 14px);
+  padding: 14px 14px calc(var(--nav-h) + var(--players-h) + 14px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -365,6 +366,40 @@ main {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+#players-section {
+  position: fixed;
+  bottom: var(--nav-h);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 60;
+  background: var(--white);
+  border-top: 1px solid var(--gray-200);
+  border-radius: 0;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+  padding: 8px 12px 10px;
+  max-height: var(--players-h);
+  overflow-y: auto;
+}
+
+#players-section .section-title {
+  font-size: 10px;
+  margin-bottom: 6px;
+  letter-spacing: 0.6px;
+}
+
+#players-section .section-hint { font-size: 10px; }
+
+#players-section .chip {
+  padding: 4px 10px;
+  border-width: 1.5px;
+}
+#players-section .chip-id { font-size: 13px; }
+#players-section .chip-games { font-size: 10px; }
+
+.version-footer { display: none; }
 
 .chip {
   display: inline-flex;

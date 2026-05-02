@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 23:05';
-const VERSION_NOTES = '初回はかならず1234（番号順）から開始';
+const APP_VERSION = '2026/5/2 23:30';
+const VERSION_NOTES = '参加プレイヤーを画面下部に常時表示';
 
 // ── State ─────────────────────────────────────────
 //
