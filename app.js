@@ -250,11 +250,6 @@ function renderCourts() {
 
   state.combinations.forEach((combo, idx) => {
     const card = el('div', 'combo-card');
-
-    const header = el('div', 'combo-header');
-    header.textContent = `パターン ${idx + 1}`;
-    card.appendChild(header);
-
     const body = el('div', 'combo-body');
 
     for (const m of combo.courts) {
