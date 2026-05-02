@@ -180,7 +180,7 @@ main {
   padding-left: 40px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .combo-card {
@@ -198,8 +198,8 @@ main {
   content: '';
   position: absolute;
   left: 0;
-  top: 12px;
-  bottom: 12px;
+  top: 8px;
+  bottom: 8px;
   width: 3px;
   background: linear-gradient(180deg,
     var(--brass-light) 0%,
@@ -274,10 +274,10 @@ main {
 /* ── Combo body ──────────────────────────── */
 
 .combo-body {
-  padding: 10px 16px 12px 18px;
+  padding: 4px 14px 4px 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .combo-courts {
@@ -289,16 +289,16 @@ main {
 .combo-court-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 10px;
+  padding: 4px 0;
   border-bottom: 1px solid var(--line-soft);
 }
 .combo-court-row:last-of-type { border-bottom: none; }
 
 .combo-court-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: var(--cream);
   background: var(--court);
   padding: 4px 9px;
@@ -342,27 +342,27 @@ main {
 }
 
 .player-badge.sm {
-  min-width: 36px;
-  height: 36px;
-  font-size: 14px;
-  border-radius: 18px;
+  min-width: 42px;
+  height: 42px;
+  font-size: 17px;
+  border-radius: 21px;
   border-width: 1.5px;
 }
 
 .team-amp {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-faint);
   font-weight: 300;
 }
 
 .vs-label {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   font-style: italic;
   color: var(--brass);
   padding: 0 4px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: lowercase;
 }
 

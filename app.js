@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 3:00';
-const VERSION_NOTES = '次試合のハイライトも廃止、チップは状態表示なし';
+const APP_VERSION = '2026/5/3 3:20';
+const VERSION_NOTES = '組み合わせ行を一覧性重視に（番号大きく、行は詰める）';
 
 // ── State ─────────────────────────────────────────
 //
