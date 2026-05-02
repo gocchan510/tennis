@@ -403,6 +403,84 @@ main {
   line-height: 1.6;
 }
 
+/* ── Setup screen ─────────────────────────── */
+
+.setup-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.setup-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.setup-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.setup-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup-input {
+  width: 110px;
+  height: 56px;
+  border: 2px solid var(--green);
+  border-radius: 10px;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--green-dark);
+  outline: none;
+  -moz-appearance: textfield;
+}
+.setup-input::-webkit-inner-spin-button,
+.setup-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.setup-input:focus { border-color: var(--green-dark); }
+
+.setup-unit {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.btn-start {
+  width: 100%;
+  padding: 15px;
+  border-radius: 10px;
+  border: none;
+  background: var(--green);
+  color: var(--white);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-start:active {
+  background: var(--green-dark);
+  transform: scale(0.98);
+}
+.btn-start:disabled {
+  background: var(--gray-200);
+  color: var(--gray-400);
+  cursor: default;
+  transform: none;
+}
+
 /* ── Utilities ────────────────────────────── */
 
 .hidden { display: none !important; }

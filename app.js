@@ -26,6 +26,16 @@ function saveState() {
 
 // ── Player management ─────────────────────────────
 
+function initPlayers(count) {
+  for (let i = 0; i < count; i++) {
+    const id = state.nextId++;
+    state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
+  }
+  regenerateMatches();
+  saveState();
+  render();
+}
+
 function addPlayer() {
   const id = state.nextId++;
   state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
@@ -250,23 +260,28 @@ function renderWaiting(inMatchIds) {
   section.classList.remove('hidden');
 }
 
+// ── Render: setup screen ─────────────────────────
+
+function renderSetup() {
+  const hasPlayers = Object.keys(state.players).length > 0;
+  document.getElementById('setup-screen').classList.toggle('hidden', hasPlayers);
+  document.getElementById('players-section').classList.toggle('hidden', !hasPlayers);
+}
+
 // ── Render: players ───────────────────────────────
 
 function renderPlayers() {
   const list = document.getElementById('players-list');
-  const noPlayers = document.getElementById('no-players');
   const countEl = document.getElementById('player-count');
 
   const all = Object.values(state.players).sort((a, b) => a.id - b.id);
 
   if (all.length === 0) {
     list.innerHTML = '';
-    noPlayers.classList.remove('hidden');
     countEl.textContent = '';
     return;
   }
 
-  noPlayers.classList.add('hidden');
   list.innerHTML = '';
   all.forEach(p => list.appendChild(makeChip(p)));
 
@@ -342,6 +357,7 @@ function renderStats() {
 // ── Full render ───────────────────────────────────
 
 function render() {
+  renderSetup();
   renderCourts();
   renderPlayers();
   renderStats();
@@ -367,6 +383,30 @@ document.addEventListener('DOMContentLoaded', () => {
   loadState();
   document.getElementById('btn-add').addEventListener('click', addPlayer);
   setupNav();
+
+  const input = document.getElementById('setup-count');
+  const btnStart = document.getElementById('btn-start');
+
+  const validate = () => {
+    const v = parseInt(input.value, 10);
+    btnStart.disabled = !(v >= 1 && v <= 99);
+  };
+  input.addEventListener('input', validate);
+  validate();
+
+  btnStart.addEventListener('click', () => {
+    const count = parseInt(input.value, 10);
+    if (count >= 1 && count <= 99) {
+      input.value = '';
+      validate();
+      initPlayers(count);
+    }
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !btnStart.disabled) btnStart.click();
+  });
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

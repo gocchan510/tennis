@@ -22,15 +22,26 @@
         <button id="btn-add" class="btn-add" aria-label="プレイヤー追加">＋</button>
       </header>
       <main id="main-content">
+        <!-- Setup screen (shown when no players) -->
+        <div id="setup-screen" class="setup-screen hidden">
+          <div class="setup-card">
+            <h2 class="setup-title">参加人数を入力</h2>
+            <div class="setup-input-row">
+              <input id="setup-count" type="number" min="1" max="99" placeholder="例: 10" class="setup-input" inputmode="numeric">
+              <span class="setup-unit">人</span>
+            </div>
+            <button id="btn-start" class="btn-start">スタート</button>
+          </div>
+        </div>
+
         <div id="courts"></div>
         <section id="waiting-section" class="section hidden">
           <h2 class="section-title">待機中</h2>
           <div id="waiting-list" class="player-chips"></div>
         </section>
-        <section id="players-section" class="section">
+        <section id="players-section" class="section hidden">
           <h2 class="section-title">参加プレイヤー <span class="section-hint">タップで退場／復帰</span></h2>
           <div id="players-list" class="player-chips"></div>
-          <p id="no-players" class="empty-msg hidden">＋ボタンでプレイヤーを追加してください</p>
         </section>
       </main>
     </div>
