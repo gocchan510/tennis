@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 1:00';
-const VERSION_NOTES = 'ヘッダーにリセットボタン追加';
+const APP_VERSION = '2026/5/3 1:30';
+const VERSION_NOTES = '2面・大人数のスタート時の重さを改善（候補が多い時はサンプリング）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -111,6 +111,43 @@ function combinations(arr, k) {
   return out;
 }
 
+function nCk(n, k) {
+  if (k < 0 || k > n) return 0;
+  k = Math.min(k, n - k);
+  let r = 1;
+  for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1);
+  return Math.round(r);
+}
+
+// Random sample of `count` distinct k-subsets of arr (no enumeration).
+function sampleCombinations(arr, k, count) {
+  const out = [];
+  const seen = new Set();
+  const n = arr.length;
+  let attempts = 0;
+  while (out.length < count && attempts < count * 6) {
+    attempts++;
+    const idx = new Set();
+    while (idx.size < k) idx.add(Math.floor(Math.random() * n));
+    const sorted = [...idx].sort((a, b) => a - b);
+    const key = sorted.join(',');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(sorted.map(i => arr[i]));
+  }
+  return out;
+}
+
+// Cap on subset enumeration. Above this we randomly sample to stay fast.
+const MAX_SUBSET_SAMPLES = 200;
+
+function fillerSubsetsFor(filler, fillerNeeded) {
+  if (fillerNeeded === 0) return [[]];
+  return nCk(filler.length, fillerNeeded) <= MAX_SUBSET_SAMPLES
+    ? combinations(filler, fillerNeeded)
+    : sampleCombinations(filler, fillerNeeded, MAX_SUBSET_SAMPLES);
+}
+
 // Sum-of-squares of court-mate counts for all pairs within a court group.
 function courtMateScore(group, vcm) {
   let s = 0;
@@ -173,10 +210,14 @@ function computeRF(active, vg, needed) {
 // When multiple subsets tie, pick randomly (or deterministically for the
 // very first combo of a fresh session).
 function nextCombo1Court(rf, vcm, vpairs, vopps, deterministic) {
-  const fillerSubsets = rf.fillerNeeded === 0
-    ? [[]]
-    : combinations(rf.filler, rf.fillerNeeded);
+  if (deterministic) {
+    const sub = rf.filler.slice(0, rf.fillerNeeded);
+    const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
+    const p = pickFairPairing(pool, vpairs, vopps, true);
+    return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
+  }
 
+  const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
   let tied = [];
   let bestScore = Infinity;
   for (const sub of fillerSubsets) {
@@ -187,8 +228,8 @@ function nextCombo1Court(rf, vcm, vpairs, vopps, deterministic) {
   }
   if (tied.length === 0) return null;
 
-  const best = deterministic ? tied[0] : tied[Math.floor(Math.random() * tied.length)];
-  const p = pickFairPairing(best, vpairs, vopps, deterministic);
+  const best = tied[Math.floor(Math.random() * tied.length)];
+  const p = pickFairPairing(best, vpairs, vopps, false);
   return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
 }
 
@@ -196,9 +237,22 @@ function nextCombo1Court(rf, vcm, vpairs, vopps, deterministic) {
 // When multiple splits tie, pick randomly (or deterministically for the very
 // first combo of a fresh session).
 function nextCombo2Courts(rf, vcm, vpairs, vopps, deterministic) {
-  const fillerSubsets = rf.fillerNeeded === 0
-    ? [[]]
-    : combinations(rf.filler, rf.fillerNeeded);
+  if (deterministic) {
+    const sub = rf.filler.slice(0, rf.fillerNeeded);
+    const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
+    const c1 = pool.slice(0, 4);
+    const c2 = pool.slice(4, 8);
+    const p1 = pickFairPairing(c1, vpairs, vopps, true);
+    const p2 = pickFairPairing(c2, vpairs, vopps, true);
+    return {
+      courts: [
+        { court: 1, team1: p1.team1, team2: p1.team2 },
+        { court: 2, team1: p2.team1, team2: p2.team2 },
+      ],
+    };
+  }
+
+  const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
   let tiedSplits = [];
   let bestScore = Infinity;
@@ -217,12 +271,10 @@ function nextCombo2Courts(rf, vcm, vpairs, vopps, deterministic) {
   }
   if (tiedSplits.length === 0) return null;
 
-  const bestSplit = deterministic
-    ? tiedSplits[0]
-    : tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
+  const bestSplit = tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
 
-  const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps, deterministic);
-  const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps, deterministic);
+  const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps, false);
+  const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps, false);
   return {
     courts: [
       { court: 1, team1: p1.team1, team2: p1.team2 },
