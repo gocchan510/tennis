@@ -115,7 +115,8 @@ function regenerateCombinations() {
   state.combinations = [];
   if (!numCourts) return;
 
-  const selected = pickByPriority(active, numCourts * 4);
+  const selected = pickByPriority(active, numCourts * 4)
+    .sort((a, b) => a.id - b.id);
 
   // All pairings per court slot
   const courtOptions = [];
