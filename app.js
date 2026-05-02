@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 22:50';
-const VERSION_NOTES = 'マーカーを→に変更、各行の中央にスナップ';
+const APP_VERSION = '2026/5/2 23:05';
+const VERSION_NOTES = '初回はかならず1234（番号順）から開始';
 
 // ── State ─────────────────────────────────────────
 //
@@ -114,7 +114,9 @@ function courtMateScore(group, vcm) {
 // Pick pairing minimizing both pair (teammate) and opponent counts.
 // Within a fixed 4-player group, choosing a pairing fixes 2 new pair-pairs
 // and 4 new opponent-pairs. We minimize the sum across both.
-function pickFairPairing(group, vpairs, vopps) {
+// `deterministic` picks the first tied option (smallest IDs first) instead
+// of random — used for the very first combo of a fresh session.
+function pickFairPairing(group, vpairs, vopps, deterministic) {
   const opts = pairingOpts(group);
   let tied = [];
   let bestScore = Infinity;
@@ -128,7 +130,7 @@ function pickFairPairing(group, vpairs, vopps) {
     if (score < bestScore) { bestScore = score; tied = [opt]; }
     else if (score === bestScore) { tied.push(opt); }
   }
-  return tied[Math.floor(Math.random() * tied.length)];
+  return deterministic ? tied[0] : tied[Math.floor(Math.random() * tied.length)];
 }
 
 // Required (must-play) and filler tier from virtual game counts.
@@ -156,8 +158,9 @@ function computeRF(active, vg, needed) {
 }
 
 // Pick the next combo for 1 court: best filler subset by court-mate score.
-// When multiple subsets tie, pick randomly among them to prevent clustering.
-function nextCombo1Court(rf, vcm, vpairs, vopps) {
+// When multiple subsets tie, pick randomly (or deterministically for the
+// very first combo of a fresh session).
+function nextCombo1Court(rf, vcm, vpairs, vopps, deterministic) {
   const fillerSubsets = rf.fillerNeeded === 0
     ? [[]]
     : combinations(rf.filler, rf.fillerNeeded);
@@ -172,14 +175,15 @@ function nextCombo1Court(rf, vcm, vpairs, vopps) {
   }
   if (tied.length === 0) return null;
 
-  const best = tied[Math.floor(Math.random() * tied.length)];
-  const p = pickFairPairing(best, vpairs, vopps);
+  const best = deterministic ? tied[0] : tied[Math.floor(Math.random() * tied.length)];
+  const p = pickFairPairing(best, vpairs, vopps, deterministic);
   return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
 }
 
 // Pick the next combo for 2 courts: best (filler × split) by total court-mate score.
-// When multiple splits tie, pick randomly among them to prevent clustering.
-function nextCombo2Courts(rf, vcm, vpairs, vopps) {
+// When multiple splits tie, pick randomly (or deterministically for the very
+// first combo of a fresh session).
+function nextCombo2Courts(rf, vcm, vpairs, vopps, deterministic) {
   const fillerSubsets = rf.fillerNeeded === 0
     ? [[]]
     : combinations(rf.filler, rf.fillerNeeded);
@@ -201,10 +205,12 @@ function nextCombo2Courts(rf, vcm, vpairs, vopps) {
   }
   if (tiedSplits.length === 0) return null;
 
-  const bestSplit = tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
+  const bestSplit = deterministic
+    ? tiedSplits[0]
+    : tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
 
-  const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps);
-  const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps);
+  const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps, deterministic);
+  const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps, deterministic);
   return {
     courts: [
       { court: 1, team1: p1.team1, team2: p1.team2 },
@@ -248,13 +254,19 @@ function appendCombinations(count) {
     }
   }
 
+  // Fresh session = no rows yet AND no recorded games. Force the very first
+  // generated combo to be the lowest-numbered players in lexicographic order.
+  const isFreshStart = state.combinations.length === 0 &&
+    active.every(p => p.games === 0);
+
   for (let i = 0; i < count; i++) {
     const rf = computeRF(active, vg, needed);
     if (!rf) break;
 
+    const det = isFreshStart && i === 0;
     const combo = numCourts === 1
-      ? nextCombo1Court(rf, vcm, vpairs, vopps)
-      : nextCombo2Courts(rf, vcm, vpairs, vopps);
+      ? nextCombo1Court(rf, vcm, vpairs, vopps, det)
+      : nextCombo2Courts(rf, vcm, vpairs, vopps, det);
     if (!combo) break;
 
     state.combinations.push(combo);
