@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 7:30';
-const VERSION_NOTES = '2面は8人以上必須に修正';
+const APP_VERSION = '2026/5/3 8:00';
+const VERSION_NOTES = 'セットアップ画面をコート数→人数の順に変更';
 
 // ── State ─────────────────────────────────────────
 //
@@ -749,26 +749,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStart = document.getElementById('btn-start');
   let selectedCourts = 1;
 
-  document.querySelectorAll('.court-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.court-toggle-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedCourts = parseInt(btn.dataset.courts, 10);
-    });
-  });
+  const minCount = () => selectedCourts === 2 ? 8 : 4;
 
   const validate = () => {
     const v = parseInt(input.dataset.value, 10);
-    btnStart.disabled = !(v >= 4 && v <= 20);
+    btnStart.disabled = !(v >= minCount() && v <= 20);
   };
-  validate();
 
-  // Custom compact picker: 4-column grid popup with 1〜20.
   const setCount = (v) => {
     input.dataset.value = v == null ? '' : String(v);
     input.textContent = v == null ? '—' : String(v);
     validate();
   };
+
+  document.querySelectorAll('.court-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.court-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCourts = parseInt(btn.dataset.courts, 10);
+      // Reset count if it's now below the new minimum
+      const cur = parseInt(input.dataset.value, 10);
+      if (cur < minCount()) setCount(null);
+      else validate();
+    });
+  });
+
+  validate();
 
   let popup = null;
   const closePopup = () => {
@@ -784,23 +790,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (popup) { closePopup(); return; }
     popup = document.createElement('div');
     popup.className = 'setup-popup';
-    for (let i = 4; i <= 20; i++) {
+    for (let i = minCount(); i <= 20; i++) {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'setup-popup-item';
       item.textContent = String(i);
       if (String(i) === input.dataset.value) item.classList.add('selected');
-      item.addEventListener('click', () => {
-        setCount(i);
-        closePopup();
-      });
+      item.addEventListener('click', () => { setCount(i); closePopup(); });
       popup.appendChild(item);
     }
     const r = input.getBoundingClientRect();
     popup.style.top = (r.bottom + 8) + 'px';
     popup.style.left = (r.left + r.width / 2) + 'px';
     document.body.appendChild(popup);
-    // Clamp inside viewport
     const pr = popup.getBoundingClientRect();
     if (pr.left < 8) popup.style.left = (8 + pr.width / 2) + 'px';
     else if (pr.right > window.innerWidth - 8)
@@ -816,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnStart.addEventListener('click', () => {
     const count = parseInt(input.dataset.value, 10);
-    if (count >= 4 && count <= 20) {
+    if (count >= minCount() && count <= 20) {
       setCount(null);
       initPlayers(count, selectedCourts);
     }
