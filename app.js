@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 21:10';
-const VERSION_NOTES = 'スコア同点時もランダム選択でさらに分散改善';
+const APP_VERSION = '2026/5/2 21:35';
+const VERSION_NOTES = 'ペア回数・対戦回数を別々に均等化';
 
 // ── State ─────────────────────────────────────────
 //
@@ -107,18 +107,24 @@ function courtMateScore(group, vcm) {
   return s;
 }
 
-// Pick pairing with lowest virtual pair score (avoids previous teammates).
-function pickFairPairing(group, vpairs) {
+// Pick pairing minimizing both pair (teammate) and opponent counts.
+// Within a fixed 4-player group, choosing a pairing fixes 2 new pair-pairs
+// and 4 new opponent-pairs. We minimize the sum across both.
+function pickFairPairing(group, vpairs, vopps) {
   const opts = pairingOpts(group);
-  let best = opts[0];
+  let tied = [];
   let bestScore = Infinity;
   for (const opt of opts) {
-    const s =
-      (vpairs.get(pairKey(opt.team1[0], opt.team1[1])) || 0) +
-      (vpairs.get(pairKey(opt.team2[0], opt.team2[1])) || 0);
-    if (s < bestScore) { bestScore = s; best = opt; }
+    const [a, b] = opt.team1;
+    const [c, d] = opt.team2;
+    const pp = (vpairs.get(pairKey(a, b)) || 0) + (vpairs.get(pairKey(c, d)) || 0);
+    const oo = (vopps.get(pairKey(a, c)) || 0) + (vopps.get(pairKey(a, d)) || 0) +
+               (vopps.get(pairKey(b, c)) || 0) + (vopps.get(pairKey(b, d)) || 0);
+    const score = pp + oo;
+    if (score < bestScore) { bestScore = score; tied = [opt]; }
+    else if (score === bestScore) { tied.push(opt); }
   }
-  return best;
+  return tied[Math.floor(Math.random() * tied.length)];
 }
 
 // Required (must-play) and filler tier from virtual game counts.
@@ -147,7 +153,7 @@ function computeRF(active, vg, needed) {
 
 // Pick the next combo for 1 court: best filler subset by court-mate score.
 // When multiple subsets tie, pick randomly among them to prevent clustering.
-function nextCombo1Court(rf, vcm, vpairs) {
+function nextCombo1Court(rf, vcm, vpairs, vopps) {
   const fillerSubsets = rf.fillerNeeded === 0
     ? [[]]
     : combinations(rf.filler, rf.fillerNeeded);
@@ -163,13 +169,13 @@ function nextCombo1Court(rf, vcm, vpairs) {
   if (tied.length === 0) return null;
 
   const best = tied[Math.floor(Math.random() * tied.length)];
-  const p = pickFairPairing(best, vpairs);
+  const p = pickFairPairing(best, vpairs, vopps);
   return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
 }
 
 // Pick the next combo for 2 courts: best (filler × split) by total court-mate score.
 // When multiple splits tie, pick randomly among them to prevent clustering.
-function nextCombo2Courts(rf, vcm, vpairs) {
+function nextCombo2Courts(rf, vcm, vpairs, vopps) {
   const fillerSubsets = rf.fillerNeeded === 0
     ? [[]]
     : combinations(rf.filler, rf.fillerNeeded);
@@ -193,8 +199,8 @@ function nextCombo2Courts(rf, vcm, vpairs) {
 
   const bestSplit = tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
 
-  const p1 = pickFairPairing(bestSplit.c1, vpairs);
-  const p2 = pickFairPairing(bestSplit.c2, vpairs);
+  const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps);
+  const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps);
   return {
     courts: [
       { court: 1, team1: p1.team1, team2: p1.team2 },
@@ -219,6 +225,7 @@ function regenerateCombinations() {
   // Pairs and court-mate (pairs + opponents) counts. Stored once per pair using
   // p.id < otherId to avoid double-counting from both sides.
   const vpairs = new Map();
+  const vopps = new Map();
   const vcm = new Map();
   for (const p of active) {
     for (const [otherIdStr, count] of Object.entries(p.pairs || {})) {
@@ -233,6 +240,7 @@ function regenerateCombinations() {
       const otherId = +otherIdStr;
       if (p.id < otherId) {
         const k = pairKey(p.id, otherId);
+        vopps.set(k, count);
         vcm.set(k, (vcm.get(k) || 0) + count);
       }
     }
@@ -243,8 +251,8 @@ function regenerateCombinations() {
     if (!rf) break;
 
     const combo = numCourts === 1
-      ? nextCombo1Court(rf, vcm, vpairs)
-      : nextCombo2Courts(rf, vcm, vpairs);
+      ? nextCombo1Court(rf, vcm, vpairs, vopps)
+      : nextCombo2Courts(rf, vcm, vpairs, vopps);
     if (!combo) break;
 
     state.combinations.push(combo);
@@ -263,6 +271,12 @@ function regenerateCombinations() {
       const k2 = pairKey(court.team2[0], court.team2[1]);
       vpairs.set(k1, (vpairs.get(k1) || 0) + 1);
       vpairs.set(k2, (vpairs.get(k2) || 0) + 1);
+      for (const a of court.team1) {
+        for (const b of court.team2) {
+          const k = pairKey(a, b);
+          vopps.set(k, (vopps.get(k) || 0) + 1);
+        }
+      }
     }
   }
 }
