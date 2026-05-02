@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 8:30';
-const VERSION_NOTES = 'Androidバックボタン対応';
+const APP_VERSION = '2026/5/3 8:45';
+const VERSION_NOTES = 'バックボタンでセットアップ画面に戻る';
 
 // ── State ─────────────────────────────────────────
 //
@@ -748,10 +748,18 @@ function setupNav() {
       history.pushState({ view: 'main' }, '');
       return;
     }
-    // Priority 2: return to main tab
+    // Priority 2: stats tab → back to main
     const view = e.state?.view ?? 'main';
-    switchView(view);
-    if (view !== 'main') history.replaceState({ view: 'main' }, '');
+    if (view !== 'main') {
+      switchView('main');
+      history.replaceState({ view: 'main' }, '');
+      return;
+    }
+    // Priority 3: in session on main → reset (same as reset button)
+    if (state.sessionStarted) {
+      history.pushState({ view: 'main' }, ''); // keep history intact for next back
+      resetSession();
+    }
   });
 }
 
