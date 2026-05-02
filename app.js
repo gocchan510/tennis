@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 20:38';
-const VERSION_NOTES = 'コートメイト分散も最適化（同コート率を改善）';
+const APP_VERSION = '2026/5/2 21:10';
+const VERSION_NOTES = 'スコア同点時もランダム選択でさらに分散改善';
 
 // ── State ─────────────────────────────────────────
 //
@@ -146,31 +146,35 @@ function computeRF(active, vg, needed) {
 }
 
 // Pick the next combo for 1 court: best filler subset by court-mate score.
+// When multiple subsets tie, pick randomly among them to prevent clustering.
 function nextCombo1Court(rf, vcm, vpairs) {
   const fillerSubsets = rf.fillerNeeded === 0
     ? [[]]
     : combinations(rf.filler, rf.fillerNeeded);
 
-  let best = null;
+  let tied = [];
   let bestScore = Infinity;
   for (const sub of fillerSubsets) {
     const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
     const score = courtMateScore(pool, vcm);
-    if (score < bestScore) { bestScore = score; best = pool; }
+    if (score < bestScore) { bestScore = score; tied = [pool]; }
+    else if (score === bestScore) { tied.push(pool); }
   }
-  if (!best) return null;
+  if (tied.length === 0) return null;
 
+  const best = tied[Math.floor(Math.random() * tied.length)];
   const p = pickFairPairing(best, vpairs);
   return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
 }
 
 // Pick the next combo for 2 courts: best (filler × split) by total court-mate score.
+// When multiple splits tie, pick randomly among them to prevent clustering.
 function nextCombo2Courts(rf, vcm, vpairs) {
   const fillerSubsets = rf.fillerNeeded === 0
     ? [[]]
     : combinations(rf.filler, rf.fillerNeeded);
 
-  let bestSplit = null;
+  let tiedSplits = [];
   let bestScore = Infinity;
 
   for (const sub of fillerSubsets) {
@@ -181,10 +185,13 @@ function nextCombo2Courts(rf, vcm, vpairs) {
       const c1ids = new Set(c1.map(p => p.id));
       const c2 = pool.filter(p => !c1ids.has(p.id)).sort((a, b) => a.id - b.id);
       const score = courtMateScore(c1, vcm) + courtMateScore(c2, vcm);
-      if (score < bestScore) { bestScore = score; bestSplit = { c1, c2 }; }
+      if (score < bestScore) { bestScore = score; tiedSplits = [{ c1, c2 }]; }
+      else if (score === bestScore) { tiedSplits.push({ c1, c2 }); }
     }
   }
-  if (!bestSplit) return null;
+  if (tiedSplits.length === 0) return null;
+
+  const bestSplit = tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
 
   const p1 = pickFairPairing(bestSplit.c1, vpairs);
   const p2 = pickFairPairing(bestSplit.c2, vpairs);
