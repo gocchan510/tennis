@@ -4,10 +4,10 @@ const STORAGE_KEY = 'tennis_v1';
 
 // ── State ─────────────────────────────────────────
 //
-// players: { [id]: { id, games, active, pairs: {[id]: n}, opponents: {[id]: n} } }
-// matches: [{ court, team1: [id,id], team2: [id,id] }]
+// players:      { [id]: { id, games, active, pairs: {[id]: n}, opponents: {[id]: n} } }
+// combinations: [{ courts: [{court, team1:[id,id], team2:[id,id]}], score }]
 
-let state = { players: {}, nextId: 1, matches: [] };
+let state = { players: {}, nextId: 1, combinations: [], maxCourts: 1, sessionStarted: false };
 
 // ── Persistence ───────────────────────────────────
 
@@ -16,7 +16,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) state = JSON.parse(raw);
   } catch (_) {
-    state = { players: {}, nextId: 1, matches: [] };
+    state = { players: {}, nextId: 1, combinations: [], maxCourts: 1, sessionStarted: false };
   }
 }
 
@@ -29,14 +29,14 @@ function saveState() {
 function initPlayers(count, maxCourts) {
   state.players = {};
   state.nextId = 1;
-  state.matches = [];
+  state.combinations = [];
   state.maxCourts = maxCourts;
   state.sessionStarted = true;
   for (let i = 0; i < count; i++) {
     const id = state.nextId++;
     state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
   }
-  regenerateMatches();
+  regenerateCombinations();
   saveState();
   render();
 }
@@ -44,7 +44,7 @@ function initPlayers(count, maxCourts) {
 function addPlayer() {
   const id = state.nextId++;
   state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
-  regenerateMatches();
+  regenerateCombinations();
   saveState();
   render();
 }
@@ -53,7 +53,7 @@ function toggleActive(id) {
   const p = state.players[id];
   if (!p) return;
   p.active = !p.active;
-  regenerateMatches();
+  regenerateCombinations();
   saveState();
   render();
 }
@@ -62,7 +62,7 @@ function activePlayers() {
   return Object.values(state.players).filter(p => p.active);
 }
 
-// ── Match generation ──────────────────────────────
+// ── Combination generation ────────────────────────
 
 function shuffle(arr) {
   const a = [...arr];
@@ -73,7 +73,6 @@ function shuffle(arr) {
   return a;
 }
 
-// Pick n players, prioritising fewest games; random within same count.
 function pickByPriority(players, n) {
   const byGames = {};
   for (const p of players) {
@@ -89,7 +88,6 @@ function pickByPriority(players, n) {
   return result;
 }
 
-// Score a pairing: lower = less repetitive. Pair penalty weighted higher.
 function scorePairing(p1, p2, p3, p4) {
   const pair =
     (p1.pairs[p2.id] ?? 0) +
@@ -100,64 +98,81 @@ function scorePairing(p1, p2, p3, p4) {
   return pair * 3 + opp;
 }
 
-// Find the best split of 4 players into two teams of two.
-function bestPairing(group) {
+// Returns all 3 pairings for a group of 4 players, with scores.
+function allPairings(group) {
   const [a, b, c, d] = group;
-  const opts = [
-    { t1: [a, b], t2: [c, d], s: scorePairing(a, b, c, d) },
-    { t1: [a, c], t2: [b, d], s: scorePairing(a, c, b, d) },
-    { t1: [a, d], t2: [b, c], s: scorePairing(a, d, b, c) },
+  return [
+    { team1: [a.id, b.id], team2: [c.id, d.id], score: scorePairing(a, b, c, d) },
+    { team1: [a.id, c.id], team2: [b.id, d.id], score: scorePairing(a, c, b, d) },
+    { team1: [a.id, d.id], team2: [b.id, c.id], score: scorePairing(a, d, b, c) },
   ];
-  opts.sort((x, y) => x.s - y.s);
-  const best = opts.filter(o => o.s === opts[0].s);
-  const pick = best[Math.floor(Math.random() * best.length)];
-  return {
-    team1: pick.t1.map(p => p.id),
-    team2: pick.t2.map(p => p.id),
-  };
 }
 
-function regenerateMatches() {
+function regenerateCombinations() {
   const active = activePlayers();
-  const max = state.maxCourts ?? 2;
-  const possible = Math.floor(active.length / 4);
-  const numCourts = Math.min(possible, max);
-  state.matches = [];
+  const max = state.maxCourts ?? 1;
+  const numCourts = Math.min(Math.floor(active.length / 4), max);
+  state.combinations = [];
   if (!numCourts) return;
+
   const selected = pickByPriority(active, numCourts * 4);
+
+  // All pairings per court slot
+  const courtOptions = [];
   for (let c = 0; c < numCourts; c++) {
     const group = selected.slice(c * 4, c * 4 + 4);
-    state.matches.push({ court: c + 1, ...bestPairing(group) });
+    courtOptions.push(
+      allPairings(group).map(p => ({ court: c + 1, team1: p.team1, team2: p.team2, score: p.score }))
+    );
   }
+
+  // Cross product across courts
+  const combos = [];
+  const build = (idx, current) => {
+    if (idx === courtOptions.length) {
+      const score = current.reduce((s, c) => s + c.score, 0);
+      combos.push({
+        courts: current.map(({ score: _s, ...rest }) => rest),
+        score,
+      });
+      return;
+    }
+    for (const opt of courtOptions[idx]) build(idx + 1, [...current, opt]);
+  };
+  build(0, []);
+
+  combos.sort((a, b) => a.score - b.score);
+  state.combinations = combos;
 }
 
-// ── Record a match ────────────────────────────────
+// ── Record a combination ──────────────────────────
 
-function recordMatch(courtIndex) {
-  const match = state.matches[courtIndex];
-  if (!match) return;
-
-  const ids = [...match.team1, ...match.team2];
-  const [p1, p2, p3, p4] = ids.map(id => state.players[id]);
-  if (!p1 || !p2 || !p3 || !p4) return;
-
-  for (const p of [p1, p2, p3, p4]) p.games++;
+function recordCombination(idx) {
+  const combo = state.combinations[idx];
+  if (!combo) return;
 
   const inc = (a, b) => {
     a.pairs[b.id] = (a.pairs[b.id] ?? 0) + 1;
     b.pairs[a.id] = (b.pairs[a.id] ?? 0) + 1;
   };
-  inc(p1, p2);
-  inc(p3, p4);
-
   const incOpp = (a, b) => {
     a.opponents[b.id] = (a.opponents[b.id] ?? 0) + 1;
     b.opponents[a.id] = (b.opponents[a.id] ?? 0) + 1;
   };
-  incOpp(p1, p3); incOpp(p1, p4);
-  incOpp(p2, p3); incOpp(p2, p4);
 
-  regenerateMatches();
+  for (const match of combo.courts) {
+    const [p1, p2] = match.team1.map(id => state.players[id]);
+    const [p3, p4] = match.team2.map(id => state.players[id]);
+    if (!p1 || !p2 || !p3 || !p4) continue;
+
+    for (const p of [p1, p2, p3, p4]) p.games++;
+    inc(p1, p2);
+    inc(p3, p4);
+    incOpp(p1, p3); incOpp(p1, p4);
+    incOpp(p2, p3); incOpp(p2, p4);
+  }
+
+  regenerateCombinations();
   saveState();
   render();
 }
@@ -181,7 +196,39 @@ function makeChip(p) {
   return chip;
 }
 
-// ── Render: courts ────────────────────────────────
+function makeMatchRow(courtNum, team1, team2) {
+  const row = el('div', 'combo-court-row');
+
+  const label = el('span', 'combo-court-label');
+  label.textContent = `${courtNum}面`;
+  row.appendChild(label);
+
+  const matchDiv = el('div', 'combo-match');
+
+  const renderTeam = (ids) => {
+    const team = el('div', 'team');
+    ids.forEach((id, i) => {
+      if (i > 0) {
+        const amp = el('span', 'team-amp');
+        amp.textContent = '＆';
+        team.appendChild(amp);
+      }
+      const badge = el('div', 'player-badge sm');
+      badge.textContent = String(id);
+      team.appendChild(badge);
+    });
+    return team;
+  };
+
+  const vs = el('span', 'vs-label');
+  vs.textContent = 'vs';
+
+  matchDiv.append(renderTeam(team1), vs, renderTeam(team2));
+  row.appendChild(matchDiv);
+  return row;
+}
+
+// ── Render: combinations ──────────────────────────
 
 function renderCourts() {
   const container = document.getElementById('courts');
@@ -197,51 +244,33 @@ function renderCourts() {
     return;
   }
 
-  const inMatchIds = new Set(state.matches.flatMap(m => [...m.team1, ...m.team2]));
+  const allIds = state.combinations.length > 0
+    ? new Set(state.combinations[0].courts.flatMap(m => [...m.team1, ...m.team2]))
+    : new Set();
 
-  state.matches.forEach((match, idx) => {
-    const card = el('div', 'court-card');
+  state.combinations.forEach((combo, idx) => {
+    const card = el('div', 'combo-card');
 
-    const header = el('div', 'court-header');
-    header.textContent = `${match.court}面`;
+    const header = el('div', `combo-header${idx === 0 ? ' best' : ''}`);
+    header.textContent = idx === 0 ? '推奨' : `パターン ${idx + 1}`;
     card.appendChild(header);
 
-    const body = el('div', 'court-body');
+    const body = el('div', 'combo-body');
 
-    // Match display
-    const matchDiv = el('div', 'match-display');
-
-    const renderTeam = (ids) => {
-      const team = el('div', 'team');
-      ids.forEach((id, i) => {
-        if (i > 0) {
-          const amp = el('span', 'team-amp');
-          amp.textContent = '＆';
-          team.appendChild(amp);
-        }
-        const badge = el('div', 'player-badge');
-        badge.textContent = String(id);
-        team.appendChild(badge);
-      });
-      return team;
-    };
-
-    const vsLabel = el('div', 'vs-label');
-    vsLabel.textContent = 'vs';
-
-    matchDiv.append(renderTeam(match.team1), vsLabel, renderTeam(match.team2));
-    body.appendChild(matchDiv);
+    for (const m of combo.courts) {
+      body.appendChild(makeMatchRow(m.court, m.team1, m.team2));
+    }
 
     const btn = el('button', 'btn-record');
     btn.textContent = '記録する';
-    btn.addEventListener('click', () => recordMatch(idx));
+    btn.addEventListener('click', () => recordCombination(idx));
     body.appendChild(btn);
 
     card.appendChild(body);
     container.appendChild(card);
   });
 
-  renderWaiting(inMatchIds);
+  renderWaiting(allIds);
 }
 
 function renderWaiting(inMatchIds) {
@@ -280,18 +309,12 @@ function renderSetup() {
 function renderPlayers() {
   const list = document.getElementById('players-list');
   const countEl = document.getElementById('player-count');
-
   const all = Object.values(state.players).sort((a, b) => a.id - b.id);
 
-  if (all.length === 0) {
-    list.innerHTML = '';
-    countEl.textContent = '';
-    return;
-  }
-
   list.innerHTML = '';
-  all.forEach(p => list.appendChild(makeChip(p)));
+  if (all.length === 0) { countEl.textContent = ''; return; }
 
+  all.forEach(p => list.appendChild(makeChip(p)));
   const activeCount = all.filter(p => p.active).length;
   countEl.textContent = `参加中 ${activeCount}人`;
 }
@@ -324,7 +347,6 @@ function renderStats() {
   players.forEach(p => {
     const card = el('div', 'stat-card');
 
-    // Header row
     const header = el('div', 'stat-card-header');
     const badge = el('div', `stat-player-badge${p.active ? '' : ' inactive'}`);
     badge.textContent = String(p.id);
@@ -338,7 +360,6 @@ function renderStats() {
     }
     card.appendChild(header);
 
-    // History rows
     const rows = el('div', 'stat-rows');
 
     const pairRow = el('div', 'stat-row');
@@ -388,7 +409,6 @@ function setupNav() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
-  // Always show setup on launch
   state.sessionStarted = false;
   document.getElementById('btn-add').addEventListener('click', addPlayer);
   setupNav();

@@ -105,7 +105,66 @@ main {
   gap: 14px;
 }
 
-/* ── Court cards ──────────────────────────── */
+/* ── Combination cards ────────────────────── */
+
+.combo-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.combo-header {
+  background: var(--gray-200);
+  color: var(--gray-600);
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.combo-header.best {
+  background: var(--green);
+  color: var(--white);
+}
+
+.combo-body {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.combo-court-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+.combo-court-row:last-of-type { border-bottom: none; }
+
+.combo-court-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--green);
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.combo-match {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+}
+
+/* ── Court cards (legacy, keep for no-match-msg) ── */
 
 .court-card {
   background: var(--white);
@@ -155,6 +214,13 @@ main {
   font-size: 17px;
   color: var(--green-dark);
   letter-spacing: -0.5px;
+}
+
+.player-badge.sm {
+  min-width: 36px;
+  height: 36px;
+  font-size: 14px;
+  border-radius: 18px;
 }
 
 .team-amp {
