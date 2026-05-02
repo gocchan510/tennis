@@ -65,22 +65,34 @@ function activePlayers() {
 
 // ── Combination generation ────────────────────────
 
-// Priority pool: expand tiers (fewest games first) until we have enough players.
-function buildPool(active, numCourts) {
-  const needed = numCourts * 4;
+// Split active players into required (must play) and filler (fills remaining slots).
+// Required = all tiers fully below the needed count; filler = the tier that puts us over.
+function buildRequiredAndFiller(active, needed) {
   const sorted = [...active].sort((a, b) => a.games - b.games || a.id - b.id);
-  if (sorted.length < needed) return [];
+  if (sorted.length < needed) return null;
 
-  const pool = [];
+  const required = [];
   let i = 0;
-  while (pool.length < needed && i < sorted.length) {
+  while (i < sorted.length) {
     const tier = sorted[i].games;
-    while (i < sorted.length && sorted[i].games === tier) pool.push(sorted[i++]);
+    const tierMembers = [];
+    while (i < sorted.length && sorted[i].games === tier) tierMembers.push(sorted[i++]);
+
+    if (required.length + tierMembers.length <= needed) {
+      required.push(...tierMembers);
+      if (required.length === needed) return { required, filler: [], fillerNeeded: 0 };
+    } else {
+      return {
+        required,
+        filler: tierMembers,
+        fillerNeeded: needed - required.length,
+      };
+    }
   }
-  return pool.sort((a, b) => a.id - b.id);
+  return null;
 }
 
-// Generator: choose k items from arr (yields arrays of objects).
+// Generator: choose k items from arr in natural order.
 function* choose(arr, k) {
   if (k === 0) { yield []; return; }
   if (arr.length < k) return;
@@ -99,35 +111,42 @@ function pairingOpts(group) {
   ];
 }
 
-// Generator: all 1-court combinations from pool.
-function* gen1Court(pool) {
-  for (const group of choose(pool, 4)) {
+// Generator: 1-court combinations. Required players always included.
+function* gen1Court(required, filler, fillerNeeded) {
+  for (const fillerGroup of choose(filler, fillerNeeded)) {
+    const group = [...required, ...fillerGroup].sort((a, b) => a.id - b.id);
     for (const { team1, team2 } of pairingOpts(group)) {
       yield { courts: [{ court: 1, team1, team2 }] };
     }
   }
 }
 
-// Generator: all 2-court combinations from pool.
-// Fix: smallest-ID player always goes to court 1 to avoid duplicate splits.
-function* gen2Courts(pool) {
+// Generator: 2-court combinations from a fixed pool of 8.
+// Anchor smallest-ID player to court 1 to avoid duplicate splits.
+function* gen2CourtsFromPool(pool) {
   const [anchor, ...rest] = pool;
   for (const trio of choose(rest, 3)) {
     const court1 = [anchor, ...trio].sort((a, b) => a.id - b.id);
     const c1ids = new Set(court1.map(p => p.id));
-    const remaining = pool.filter(p => !c1ids.has(p.id));
-    for (const court2 of choose(remaining, 4)) {
-      for (const p1 of pairingOpts(court1)) {
-        for (const p2 of pairingOpts(court2)) {
-          yield {
-            courts: [
-              { court: 1, team1: p1.team1, team2: p1.team2 },
-              { court: 2, team1: p2.team1, team2: p2.team2 },
-            ],
-          };
-        }
+    const court2 = pool.filter(p => !c1ids.has(p.id)).sort((a, b) => a.id - b.id);
+    for (const p1 of pairingOpts(court1)) {
+      for (const p2 of pairingOpts(court2)) {
+        yield {
+          courts: [
+            { court: 1, team1: p1.team1, team2: p1.team2 },
+            { court: 2, team1: p2.team1, team2: p2.team2 },
+          ],
+        };
       }
     }
+  }
+}
+
+// Generator: 2-court combinations. Required players always included.
+function* gen2Courts(required, filler, fillerNeeded) {
+  for (const fillerGroup of choose(filler, fillerNeeded)) {
+    const pool = [...required, ...fillerGroup].sort((a, b) => a.id - b.id);
+    yield* gen2CourtsFromPool(pool);
   }
 }
 
@@ -137,10 +156,14 @@ function regenerateCombinations() {
   state.combinations = [];
   if (!numCourts) return;
 
-  const pool = buildPool(active, numCourts);
-  if (pool.length < numCourts * 4) return;
+  const rf = buildRequiredAndFiller(active, numCourts * 4);
+  if (!rf) return;
 
-  const gen = numCourts === 1 ? gen1Court(pool) : gen2Courts(pool);
+  const { required, filler, fillerNeeded } = rf;
+  const gen = numCourts === 1
+    ? gen1Court(required, filler, fillerNeeded)
+    : gen2Courts(required, filler, fillerNeeded);
+
   for (const combo of gen) {
     state.combinations.push(combo);
     if (state.combinations.length >= MAX_COMBOS) break;
