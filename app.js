@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 0:10';
-const VERSION_NOTES = '途中参加・復帰の人を現メンバーと同じ優先度に揃える';
+const APP_VERSION = '2026/5/3 0:30';
+const VERSION_NOTES = 'プレイヤー追加ボタンをチップ列内に移動';
 
 // ── State ─────────────────────────────────────────
 //
@@ -579,6 +579,14 @@ function renderSetup() {
 
 // ── Render: players ───────────────────────────────
 
+function makeAddChip() {
+  const chip = el('button', 'chip add-chip');
+  chip.setAttribute('aria-label', 'プレイヤー追加');
+  chip.textContent = '＋';
+  chip.addEventListener('click', addPlayer);
+  return chip;
+}
+
 function renderPlayers() {
   const list = document.getElementById('players-list');
   const countEl = document.getElementById('player-count');
@@ -588,6 +596,7 @@ function renderPlayers() {
   if (all.length === 0) { countEl.textContent = ''; return; }
 
   all.forEach(p => list.appendChild(makeChip(p)));
+  list.appendChild(makeAddChip());
   const activeCount = all.filter(p => p.active).length;
   countEl.textContent = `参加中 ${activeCount}人`;
 }
@@ -688,7 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `${APP_VERSION} 〜 ${VERSION_NOTES}`;
   document.getElementById('version-footer').textContent = `更新 ${APP_VERSION}`;
 
-  document.getElementById('btn-add').addEventListener('click', addPlayer);
   setupNav();
 
   const input = document.getElementById('setup-count');

@@ -443,6 +443,21 @@ main {
 }
 .chip.waiting-chip .chip-id { color: var(--gray-600); }
 
+.chip.add-chip {
+  background: var(--green);
+  color: var(--white);
+  border-color: var(--green);
+  font-weight: 800;
+  font-size: 16px;
+  padding: 4px 12px;
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.chip.add-chip:active { background: var(--green-dark); }
+
 /* ── Bottom nav ───────────────────────────── */
 
 .bottom-nav {
