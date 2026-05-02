@@ -774,12 +774,14 @@ main {
 
 .setup-popup {
   position: fixed;
-  width: 248px;
-  margin-left: -124px;
+  width: 100px;
+  margin-left: -50px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  max-height: 300px;
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -788,7 +790,7 @@ main {
   box-sizing: border-box;
 }
 .setup-popup-item {
-  flex: 0 0 calc((100% - 18px) / 4);
+  flex: 0 0 auto;
   height: 44px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);

@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 4:30';
-const VERSION_NOTES = '参加人数ピッカーの表示崩れ修正';
+const APP_VERSION = '2026/5/3 5:00';
+const VERSION_NOTES = '参加人数ピッカーを縦1列表示に変更';
 
 // ── State ─────────────────────────────────────────
 //
