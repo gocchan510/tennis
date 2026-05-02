@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 6:00';
-const VERSION_NOTES = 'コート行の横はみ出し修正';
+const APP_VERSION = '2026/5/3 7:00';
+const VERSION_NOTES = '初回は全員が1回ずつ出るまでID順に割り当て';
 
 // ── State ─────────────────────────────────────────
 //
@@ -207,16 +207,7 @@ function computeRF(active, vg, needed) {
 }
 
 // Pick the next combo for 1 court: best filler subset by court-mate score.
-// When multiple subsets tie, pick randomly (or deterministically for the
-// very first combo of a fresh session).
-function nextCombo1Court(rf, vcm, vpairs, vopps, deterministic) {
-  if (deterministic) {
-    const sub = rf.filler.slice(0, rf.fillerNeeded);
-    const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
-    const p = pickFairPairing(pool, vpairs, vopps, true);
-    return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
-  }
-
+function nextCombo1Court(rf, vcm, vpairs, vopps) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
   let tied = [];
   let bestScore = Infinity;
@@ -234,24 +225,7 @@ function nextCombo1Court(rf, vcm, vpairs, vopps, deterministic) {
 }
 
 // Pick the next combo for 2 courts: best (filler × split) by total court-mate score.
-// When multiple splits tie, pick randomly (or deterministically for the very
-// first combo of a fresh session).
-function nextCombo2Courts(rf, vcm, vpairs, vopps, deterministic) {
-  if (deterministic) {
-    const sub = rf.filler.slice(0, rf.fillerNeeded);
-    const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
-    const c1 = pool.slice(0, 4);
-    const c2 = pool.slice(4, 8);
-    const p1 = pickFairPairing(c1, vpairs, vopps, true);
-    const p2 = pickFairPairing(c2, vpairs, vopps, true);
-    return {
-      courts: [
-        { court: 1, team1: p1.team1, team2: p1.team2 },
-        { court: 2, team1: p2.team1, team2: p2.team2 },
-      ],
-    };
-  }
-
+function nextCombo2Courts(rf, vcm, vpairs, vopps) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
   let tiedSplits = [];
@@ -275,6 +249,31 @@ function nextCombo2Courts(rf, vcm, vpairs, vopps, deterministic) {
 
   const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps, false);
   const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps, false);
+  return {
+    courts: [
+      { court: 1, team1: p1.team1, team2: p1.team2 },
+      { court: 2, team1: p2.team1, team2: p2.team2 },
+    ],
+  };
+}
+
+// Sequential opener: while enough 0-vg players exist, assign them in ID order
+// (court1: ids[0..3], court2: ids[4..7]). Returns null when the sequential
+// phase is over and the caller should switch to fair scheduling.
+function sequentialCombo(active, vg, numCourts, vpairs, vopps) {
+  const needed = numCourts * 4;
+  const unplayed = [...active]
+    .filter(p => vg.get(p.id) === 0)
+    .sort((a, b) => a.id - b.id);
+  if (unplayed.length < needed) return null;
+
+  const batch = unplayed.slice(0, needed);
+  if (numCourts === 1) {
+    const p = pickFairPairing(batch, vpairs, vopps, true);
+    return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
+  }
+  const p1 = pickFairPairing(batch.slice(0, 4), vpairs, vopps, true);
+  const p2 = pickFairPairing(batch.slice(4, 8), vpairs, vopps, true);
   return {
     courts: [
       { court: 1, team1: p1.team1, team2: p1.team2 },
@@ -318,20 +317,20 @@ function appendCombinations(count) {
     }
   }
 
-  // Fresh session = no rows yet AND no recorded games. Force the very first
-  // generated combo to be the lowest-numbered players in lexicographic order.
-  const isFreshStart = state.combinations.length === 0 &&
-    active.every(p => p.games === 0);
-
   for (let i = 0; i < count; i++) {
-    const rf = computeRF(active, vg, needed);
-    if (!rf) break;
-
-    const det = isFreshStart && i === 0;
-    const combo = numCourts === 1
-      ? nextCombo1Court(rf, vcm, vpairs, vopps, det)
-      : nextCombo2Courts(rf, vcm, vpairs, vopps, det);
-    if (!combo) break;
+    // Sequential phase: assign unplayed players in ID order until exhausted
+    const seqCombo = sequentialCombo(active, vg, numCourts, vpairs, vopps);
+    let combo;
+    if (seqCombo) {
+      combo = seqCombo;
+    } else {
+      const rf = computeRF(active, vg, needed);
+      if (!rf) break;
+      combo = numCourts === 1
+        ? nextCombo1Court(rf, vcm, vpairs, vopps)
+        : nextCombo2Courts(rf, vcm, vpairs, vopps);
+      if (!combo) break;
+    }
 
     state.combinations.push(combo);
 
