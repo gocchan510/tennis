@@ -252,12 +252,14 @@ function renderCourts() {
     const card = el('div', 'combo-card');
     const body = el('div', 'combo-body');
 
+    const courts = el('div', 'combo-courts');
     for (const m of combo.courts) {
-      body.appendChild(makeMatchRow(m.court, m.team1, m.team2));
+      courts.appendChild(makeMatchRow(m.court, m.team1, m.team2));
     }
+    body.appendChild(courts);
 
     const btn = el('button', 'btn-record');
-    btn.textContent = '記録する';
+    btn.textContent = '終了';
     btn.addEventListener('click', () => recordCombination(idx));
     body.appendChild(btn);
 

@@ -126,17 +126,23 @@ main {
 
 
 .combo-body {
-  padding: 10px 14px 14px;
+  padding: 6px 14px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.combo-courts {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .combo-court-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--gray-100);
 }
 .combo-court-row:last-of-type { border-bottom: none; }
@@ -235,17 +241,17 @@ main {
 }
 
 .btn-record {
-  width: 100%;
-  padding: 13px;
+  padding: 10px 16px;
   border-radius: 10px;
   border: none;
   background: var(--green);
   color: var(--white);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 0.15s, transform 0.1s;
-  letter-spacing: 0.3px;
 }
 .btn-record:active {
   background: var(--green-dark);
