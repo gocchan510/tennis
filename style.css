@@ -189,9 +189,11 @@ main {
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--line-soft);
   overflow: hidden;
-  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.2s ease;
+  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.12s ease, box-shadow 0.15s ease;
   position: relative;
+  cursor: pointer;
 }
+.combo-card:active { transform: scale(0.992); box-shadow: var(--shadow-xs); }
 
 .combo-card::before {
   /* subtle court-baseline accent on the left */

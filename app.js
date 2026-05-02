@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 3:20';
-const VERSION_NOTES = '組み合わせ行を一覧性重視に（番号大きく、行は詰める）';
+const APP_VERSION = '2026/5/3 3:35';
+const VERSION_NOTES = '行タップでマーカーをそこに移動できるように';
 
 // ── State ─────────────────────────────────────────
 //
@@ -411,6 +411,14 @@ function revertCombination(combo) {
   }
 }
 
+function moveMarkerTo(targetIdx) {
+  if (targetIdx < 0 || targetIdx >= state.combinations.length) return;
+  if (targetIdx === state.markerPos) return;
+  const oldPos = state.markerPos;
+  state.markerPos = targetIdx;
+  commitMarkerChange(oldPos, targetIdx);
+}
+
 function commitMarkerChange(oldPos, newPos) {
   if (newPos > oldPos) {
     for (let i = oldPos; i < newPos; i++) applyCombination(state.combinations[i]);
@@ -495,6 +503,8 @@ function renderCourts() {
   state.combinations.forEach((combo, idx) => {
     const card = el('div', 'combo-card');
     if (idx < state.markerPos) card.classList.add('done');
+
+    card.addEventListener('click', () => moveMarkerTo(idx));
 
     const body = el('div', 'combo-body');
     const courts = el('div', 'combo-courts');
