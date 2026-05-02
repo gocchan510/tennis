@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'tennis-2026-05-02-2022';
+const CACHE = 'tennis-2026-05-02-2026';
 const ASSETS = [
   '/',
   '/index.html',
