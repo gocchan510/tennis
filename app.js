@@ -2,6 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
+const APP_VERSION = '2026/5/2';
+const VERSION_NOTES = '公平スケジューリング・全組み合わせ表示';
 
 // ── State ─────────────────────────────────────────
 //
@@ -430,6 +432,11 @@ function setupNav() {
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
   state.sessionStarted = false;
+
+  document.getElementById('version-label').textContent =
+    `${APP_VERSION} 〜 ${VERSION_NOTES}`;
+  document.getElementById('version-footer').textContent = `更新 ${APP_VERSION}`;
+
   document.getElementById('btn-add').addEventListener('click', addPlayer);
   setupNav();
 
