@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 7:00';
-const VERSION_NOTES = '初回は全員が1回ずつ出るまでID順に割り当て';
+const APP_VERSION = '2026/5/3 7:30';
+const VERSION_NOTES = '2面は8人以上必須に修正';
 
 // ── State ─────────────────────────────────────────
 //
@@ -286,11 +286,11 @@ function sequentialCombo(active, vg, numCourts, vpairs, vopps) {
 // the current real player history (which already includes done rows).
 function appendCombinations(count) {
   const active = activePlayers();
-  const numCourts = Math.min(state.maxCourts ?? 1, Math.floor(active.length / 4));
-  if (!numCourts) return;
-
+  const maxCourts = state.maxCourts ?? 1;
+  const minPlayers = maxCourts * 4;
+  if (active.length < minPlayers) return;
+  const numCourts = maxCourts;
   const needed = numCourts * 4;
-  if (active.length < needed) return;
 
   const vg = new Map();
   for (const p of active) vg.set(p.id, p.games);
@@ -492,9 +492,10 @@ function renderCourts() {
 
   const active = activePlayers();
 
-  if (active.length < 4) {
+  const minPlayers = (state.maxCourts ?? 1) === 2 ? 8 : 4;
+  if (active.length < minPlayers) {
     const msg = el('div', 'no-match-msg');
-    msg.textContent = '4人以上参加するとコートが表示されます';
+    msg.textContent = `${minPlayers}人以上参加するとコートが表示されます`;
     container.appendChild(msg);
     return;
   }
