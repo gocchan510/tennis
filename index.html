@@ -45,10 +45,6 @@
           <h2 class="section-title">待機中</h2>
           <div id="waiting-list" class="player-chips"></div>
         </section>
-        <section id="players-section" class="section hidden">
-          <h2 class="section-title">参加プレイヤー <span class="section-hint">タップで退場／復帰</span></h2>
-          <div id="players-list" class="player-chips"></div>
-        </section>
       </main>
     </div>
 
@@ -62,6 +58,12 @@
         <p id="no-stats" class="empty-msg">まだデータがありません</p>
       </main>
     </div>
+
+    <!-- Persistent player widget (visible across views) -->
+    <section id="players-section" class="section hidden">
+      <h2 class="section-title">参加プレイヤー <span class="section-hint">タップで退場／復帰</span></h2>
+      <div id="players-list" class="player-chips"></div>
+    </section>
 
     <!-- Version footer -->
     <div id="version-footer" class="version-footer"></div>

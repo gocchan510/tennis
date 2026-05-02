@@ -484,7 +484,7 @@ main {
 #stats-content {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 14px calc(var(--nav-h) + 14px);
+  padding: 14px 14px calc(var(--nav-h) + var(--players-h) + 14px);
   display: flex;
   flex-direction: column;
   gap: 10px;
