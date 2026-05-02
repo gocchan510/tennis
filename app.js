@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 5:00';
-const VERSION_NOTES = '参加人数ピッカーを縦1列表示に変更';
+const APP_VERSION = '2026/5/3 5:30';
+const VERSION_NOTES = 'ピッカーのスマホ表示修正';
 
 // ── State ─────────────────────────────────────────
 //
@@ -800,11 +800,16 @@ document.addEventListener('DOMContentLoaded', () => {
     popup.style.top = (r.bottom + 8) + 'px';
     popup.style.left = (r.left + r.width / 2) + 'px';
     document.body.appendChild(popup);
-    // Clamp inside viewport horizontally
+    // Clamp inside viewport
     const pr = popup.getBoundingClientRect();
     if (pr.left < 8) popup.style.left = (8 + pr.width / 2) + 'px';
-    else if (pr.right > window.innerWidth - 8) {
+    else if (pr.right > window.innerWidth - 8)
       popup.style.left = (window.innerWidth - 8 - pr.width / 2) + 'px';
+    const maxH = window.innerHeight - 16;
+    if (pr.bottom > maxH) {
+      const newTop = Math.max(8, r.top - 8 - pr.height);
+      popup.style.top = newTop + 'px';
+      popup.style.maxHeight = Math.min(300, r.top - 16) + 'px';
     }
     setTimeout(() => document.addEventListener('pointerdown', onOutside, true), 0);
   });
