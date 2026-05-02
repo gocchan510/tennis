@@ -520,14 +520,6 @@ main {
 }
 .chip.chip-up .chip-id { color: var(--court-deep); }
 
-/* Player sitting out the upcoming match — quieter */
-.chip.chip-rest {
-  background: transparent;
-  border-color: var(--line);
-}
-.chip.chip-rest .chip-id { color: var(--ink-soft); font-weight: 600; }
-.chip.chip-rest .chip-games { color: var(--ink-faint); }
-
 /* Tiny court number tag for 2-court mode (next-match chips only) */
 .chip-court {
   display: inline-flex;

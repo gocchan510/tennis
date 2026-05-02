@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 2:45';
-const VERSION_NOTES = '待機中セクション統合・参加チップに次試合インジケーター';
+const APP_VERSION = '2026/5/3 2:55';
+const VERSION_NOTES = '待機表記を削除、ヘッダーは参加人数のみ';
 
 // ── State ─────────────────────────────────────────
 //
@@ -645,16 +645,12 @@ function renderPlayers() {
 
   all.forEach(p => {
     const chip = makeChip(p);
-    if (p.active) {
-      if (courtMap.has(p.id)) {
-        chip.classList.add('chip-up');
-        if (showCourtNum) {
-          const tag = el('span', 'chip-court');
-          tag.textContent = String(courtMap.get(p.id));
-          chip.appendChild(tag);
-        }
-      } else {
-        chip.classList.add('chip-rest');
+    if (p.active && courtMap.has(p.id)) {
+      chip.classList.add('chip-up');
+      if (showCourtNum) {
+        const tag = el('span', 'chip-court');
+        tag.textContent = String(courtMap.get(p.id));
+        chip.appendChild(tag);
       }
     }
     list.appendChild(chip);
@@ -662,11 +658,7 @@ function renderPlayers() {
   list.appendChild(makeAddChip());
 
   const activeCount = all.filter(p => p.active).length;
-  const upCount = courtMap.size;
-  const restCount = activeCount - upCount;
-  countEl.textContent = restCount > 0
-    ? `次 ${upCount} ／ 待機 ${restCount}`
-    : `参加 ${activeCount}人`;
+  countEl.textContent = `参加 ${activeCount}人`;
 }
 
 // ── Render: stats ─────────────────────────────────
