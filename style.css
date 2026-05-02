@@ -748,7 +748,6 @@ main {
   font-size: 30px;
   font-weight: 600;
   text-align: center;
-  text-align-last: center;
   color: var(--court-deep);
   background-color: var(--surface);
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23B8975A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
@@ -757,16 +756,63 @@ main {
   background-size: 12px auto;
   appearance: none;
   -webkit-appearance: none;
-  -moz-appearance: none;
   outline: none;
   cursor: pointer;
   letter-spacing: 0.02em;
   padding: 0 28px 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.setup-input:focus {
+.setup-input:focus,
+.setup-input:active {
   border-color: var(--court-deep);
   box-shadow: 0 0 0 4px rgba(31,74,44,0.10);
+}
+
+.setup-popup {
+  position: fixed;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(4, 56px);
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  animation: popup-in 0.14s ease;
+}
+@keyframes popup-in {
+  from { opacity: 0; transform: translate(-50%, -4px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.setup-popup-item {
+  height: 44px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--court-deep);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+}
+.setup-popup-item:active {
+  transform: scale(0.94);
+  background: var(--court-soft);
+  border-color: var(--court);
+}
+.setup-popup-item.selected {
+  background: var(--court);
+  border-color: var(--court);
+  color: var(--cream);
 }
 
 .setup-unit {

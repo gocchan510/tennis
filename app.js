@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 3:55';
-const VERSION_NOTES = '参加人数をプルダウンに（1〜20人）';
+const APP_VERSION = '2026/5/3 4:10';
+const VERSION_NOTES = '参加人数ピッカーをコンパクトな4列グリッドに';
 
 // ── State ─────────────────────────────────────────
 //
@@ -749,14 +749,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStart = document.getElementById('btn-start');
   let selectedCourts = 1;
 
-  // Populate the player count dropdown (1〜20).
-  for (let i = 1; i <= 20; i++) {
-    const opt = document.createElement('option');
-    opt.value = String(i);
-    opt.textContent = String(i);
-    input.appendChild(opt);
-  }
-
   document.querySelectorAll('.court-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.court-toggle-btn').forEach(b => b.classList.remove('active'));
@@ -766,17 +758,55 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const validate = () => {
-    const v = parseInt(input.value, 10);
+    const v = parseInt(input.dataset.value, 10);
     btnStart.disabled = !(v >= 1 && v <= 20);
   };
-  input.addEventListener('change', validate);
   validate();
 
+  // Custom compact picker: 4-column grid popup with 1〜20.
+  const setCount = (v) => {
+    input.dataset.value = v == null ? '' : String(v);
+    input.textContent = v == null ? '—' : String(v);
+    validate();
+  };
+
+  let popup = null;
+  const closePopup = () => {
+    if (popup) { popup.remove(); popup = null; }
+    document.removeEventListener('pointerdown', onOutside, true);
+  };
+  const onOutside = (e) => {
+    if (popup && !popup.contains(e.target) && e.target !== input) closePopup();
+  };
+
+  input.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (popup) { closePopup(); return; }
+    popup = document.createElement('div');
+    popup.className = 'setup-popup';
+    for (let i = 1; i <= 20; i++) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'setup-popup-item';
+      item.textContent = String(i);
+      if (String(i) === input.dataset.value) item.classList.add('selected');
+      item.addEventListener('click', () => {
+        setCount(i);
+        closePopup();
+      });
+      popup.appendChild(item);
+    }
+    const r = input.getBoundingClientRect();
+    popup.style.top = (r.bottom + 8) + 'px';
+    popup.style.left = (r.left + r.width / 2) + 'px';
+    document.body.appendChild(popup);
+    setTimeout(() => document.addEventListener('pointerdown', onOutside, true), 0);
+  });
+
   btnStart.addEventListener('click', () => {
-    const count = parseInt(input.value, 10);
+    const count = parseInt(input.dataset.value, 10);
     if (count >= 1 && count <= 20) {
-      input.value = '';
-      validate();
+      setCount(null);
       initPlayers(count, selectedCourts);
     }
   });
