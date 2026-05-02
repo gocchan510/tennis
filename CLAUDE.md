@@ -43,8 +43,10 @@ https://gocchan510.github.io/tennis/
 
 ### 進捗マーカー（記録フロー）
 - 組み合わせリストの左ガター（`#courts` 内）に **→ ハンドル** が常駐
-- ハンドルをドラッグして消化済みの位置にスナップ → 通過した上の行はグレーアウト
-- 指を離した時点で `state.markerPos` の差分だけ `applyCombination` / `revertCombination` を実行
+- 操作方法：
+  - **ドラッグ**：ハンドルをドラッグして任意の行までスクラブ（行中央にスナップ）
+  - **タップ**：行カードをタップするとマーカーがその行に飛ぶ（`moveMarkerTo`）
+- 確定時に `state.markerPos` の差分だけ `applyCombination` / `revertCombination` を実行
   - 上に戻せば履歴も巻き戻し（`games` `actualGames` `pairs` `opponents` を減算）
 - マーカー位置は `localStorage` に保存
 - マーカーが下端に近づくと自動で次の `MAX_COMBOS` 試合分を生成
