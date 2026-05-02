@@ -77,23 +77,20 @@ html, body {
   white-space: nowrap;
 }
 
-.btn-add {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.55);
+.btn-reset {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  border: 1.5px solid rgba(255,255,255,0.55);
   background: transparent;
   color: var(--white);
-  font-size: 26px;
-  line-height: 1;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
   flex-shrink: 0;
+  transition: background 0.15s;
 }
-.btn-add:active { background: rgba(255,255,255,0.2); }
+.btn-reset:active { background: rgba(255,255,255,0.2); }
 
 /* ── Main scroll area ─────────────────────── */
 

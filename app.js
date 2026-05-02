@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 0:45';
-const VERSION_NOTES = 'スタート画面で前セッションのリストが残らないように';
+const APP_VERSION = '2026/5/3 1:00';
+const VERSION_NOTES = 'ヘッダーにリセットボタン追加';
 
 // ── State ─────────────────────────────────────────
 //
@@ -580,6 +580,15 @@ function renderSetup() {
   const inSession = state.sessionStarted === true;
   document.getElementById('setup-screen').classList.toggle('hidden', inSession);
   document.getElementById('players-section').classList.toggle('hidden', !inSession);
+  document.getElementById('btn-reset').classList.toggle('hidden', !inSession);
+}
+
+function resetSession() {
+  if (!state.sessionStarted) return;
+  if (!confirm('セッションをリセットして最初の画面に戻ります。履歴もすべて消えます。よろしいですか？')) return;
+  state = FRESH_STATE();
+  saveState();
+  render();
 }
 
 // ── Render: players ───────────────────────────────
@@ -706,6 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('version-footer').textContent = `更新 ${APP_VERSION}`;
 
   setupNav();
+  document.getElementById('btn-reset').addEventListener('click', resetSession);
 
   const input = document.getElementById('setup-count');
   const btnStart = document.getElementById('btn-start');
