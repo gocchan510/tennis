@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 8:00';
-const VERSION_NOTES = 'セットアップ画面をコート数→人数の順に変更';
+const APP_VERSION = '2026/5/3 8:10';
+const VERSION_NOTES = 'PWAインストール対応（manifest修正）';
 
 // ── State ─────────────────────────────────────────
 //
