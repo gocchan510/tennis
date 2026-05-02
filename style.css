@@ -458,6 +458,40 @@ main {
   color: var(--gray-600);
 }
 
+.setup-courts-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  align-self: flex-start;
+}
+
+.court-toggle {
+  display: flex;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid var(--green);
+}
+
+.court-toggle-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--green);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.court-toggle-btn.active {
+  background: var(--green);
+  color: var(--white);
+}
+
 .btn-start {
   width: 100%;
   padding: 15px;

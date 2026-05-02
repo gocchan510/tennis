@@ -26,10 +26,11 @@ function saveState() {
 
 // ── Player management ─────────────────────────────
 
-function initPlayers(count) {
+function initPlayers(count, maxCourts) {
   state.players = {};
   state.nextId = 1;
   state.matches = [];
+  state.maxCourts = maxCourts;
   state.sessionStarted = true;
   for (let i = 0; i < count; i++) {
     const id = state.nextId++;
@@ -118,7 +119,9 @@ function bestPairing(group) {
 
 function regenerateMatches() {
   const active = activePlayers();
-  const numCourts = active.length >= 8 ? 2 : active.length >= 4 ? 1 : 0;
+  const max = state.maxCourts ?? 2;
+  const possible = Math.floor(active.length / 4);
+  const numCourts = Math.min(possible, max);
   state.matches = [];
   if (!numCourts) return;
   const selected = pickByPriority(active, numCourts * 4);
@@ -392,6 +395,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const input = document.getElementById('setup-count');
   const btnStart = document.getElementById('btn-start');
+  let selectedCourts = 1;
+
+  document.querySelectorAll('.court-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.court-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCourts = parseInt(btn.dataset.courts, 10);
+    });
+  });
 
   const validate = () => {
     const v = parseInt(input.value, 10);
@@ -405,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (count >= 1 && count <= 99) {
       input.value = '';
       validate();
-      initPlayers(count);
+      initPlayers(count, selectedCourts);
     }
   });
 
