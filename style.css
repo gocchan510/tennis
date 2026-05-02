@@ -774,23 +774,21 @@ main {
 
 .setup-popup {
   position: fixed;
-  transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: repeat(4, 56px);
-  gap: 4px;
+  width: 248px;
+  margin-left: -124px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 10px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
-  animation: popup-in 0.14s ease;
-}
-@keyframes popup-in {
-  from { opacity: 0; transform: translate(-50%, -4px); }
-  to   { opacity: 1; transform: translate(-50%, 0); }
+  box-sizing: border-box;
 }
 .setup-popup-item {
+  flex: 0 0 calc((100% - 18px) / 4);
   height: 44px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
@@ -802,6 +800,7 @@ main {
   cursor: pointer;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  padding: 0;
   transition: background 0.12s, border-color 0.12s, transform 0.08s;
 }
 .setup-popup-item:active {

@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 4:15';
-const VERSION_NOTES = '参加人数を4〜20に制限（ダブルス成立しないものは除外）';
+const APP_VERSION = '2026/5/3 4:30';
+const VERSION_NOTES = '参加人数ピッカーの表示崩れ修正';
 
 // ── State ─────────────────────────────────────────
 //
@@ -800,6 +800,12 @@ document.addEventListener('DOMContentLoaded', () => {
     popup.style.top = (r.bottom + 8) + 'px';
     popup.style.left = (r.left + r.width / 2) + 'px';
     document.body.appendChild(popup);
+    // Clamp inside viewport horizontally
+    const pr = popup.getBoundingClientRect();
+    if (pr.left < 8) popup.style.left = (8 + pr.width / 2) + 'px';
+    else if (pr.right > window.innerWidth - 8) {
+      popup.style.left = (window.innerWidth - 8 - pr.width / 2) + 'px';
+    }
     setTimeout(() => document.addEventListener('pointerdown', onOutside, true), 0);
   });
 
