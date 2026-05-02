@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 22:30';
-const VERSION_NOTES = '終了ボタン廃止、進捗マーカーをドラッグして消化';
+const APP_VERSION = '2026/5/2 22:50';
+const VERSION_NOTES = 'マーカーを→に変更、各行の中央にスナップ';
 
 // ── State ─────────────────────────────────────────
 //
@@ -429,11 +429,11 @@ function renderCourts() {
     container.appendChild(card);
   });
 
-  // Progress marker (▼ handle on the left gutter, draggable).
+  // Progress marker (→ handle on the left gutter, draggable).
   const marker = el('div', 'combo-marker');
   marker.id = 'combo-marker';
   const handle = el('div', 'marker-handle');
-  handle.textContent = '▼';
+  handle.textContent = '→';
   marker.appendChild(handle);
   container.appendChild(marker);
   setupMarkerDrag(marker, handle);
@@ -449,13 +449,14 @@ function getCardRects() {
     .map(c => c.getBoundingClientRect());
 }
 
+// markerPos = N means rows 0..N-1 are done and row N is "current".
+// Visually the marker sits at the vertical center of row N.
 function calcMarkerPosFromY(y) {
   const rects = getCardRects();
   for (let i = 0; i < rects.length; i++) {
-    const center = rects[i].top + rects[i].height / 2;
-    if (y < center) return i;
+    if (y < rects[i].bottom) return i;
   }
-  return rects.length;
+  return Math.max(0, rects.length - 1);
 }
 
 function updateMarkerPosition() {
@@ -466,16 +467,10 @@ function updateMarkerPosition() {
   if (rects.length === 0) { marker.style.display = 'none'; return; }
   marker.style.display = '';
 
-  const pos = Math.min(state.markerPos, rects.length);
   const courtsRect = courts.getBoundingClientRect();
-  let y;
-  if (pos === 0) {
-    y = rects[0].top - courtsRect.top - 7;
-  } else if (pos >= rects.length) {
-    y = rects[rects.length - 1].bottom - courtsRect.top + 7;
-  } else {
-    y = ((rects[pos - 1].bottom + rects[pos].top) / 2) - courtsRect.top;
-  }
+  const pos = Math.min(state.markerPos, rects.length - 1);
+  const r = rects[pos];
+  const y = (r.top + r.height / 2) - courtsRect.top;
   marker.style.top = y + 'px';
 }
 
