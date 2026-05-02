@@ -27,6 +27,10 @@ function saveState() {
 // ── Player management ─────────────────────────────
 
 function initPlayers(count) {
+  state.players = {};
+  state.nextId = 1;
+  state.matches = [];
+  state.sessionStarted = true;
   for (let i = 0; i < count; i++) {
     const id = state.nextId++;
     state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
@@ -263,9 +267,9 @@ function renderWaiting(inMatchIds) {
 // ── Render: setup screen ─────────────────────────
 
 function renderSetup() {
-  const hasPlayers = Object.keys(state.players).length > 0;
-  document.getElementById('setup-screen').classList.toggle('hidden', hasPlayers);
-  document.getElementById('players-section').classList.toggle('hidden', !hasPlayers);
+  const inSession = state.sessionStarted === true;
+  document.getElementById('setup-screen').classList.toggle('hidden', inSession);
+  document.getElementById('players-section').classList.toggle('hidden', !inSession);
 }
 
 // ── Render: players ───────────────────────────────
@@ -381,6 +385,8 @@ function setupNav() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
+  // Always show setup on launch
+  state.sessionStarted = false;
   document.getElementById('btn-add').addEventListener('click', addPlayer);
   setupNav();
 
