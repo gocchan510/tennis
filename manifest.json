@@ -1,0 +1,18 @@
+{
+  "name": "テニス組み合わせ",
+  "short_name": "テニス",
+  "description": "テニスダブルスの組み合わせを管理するアプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1a5c1a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

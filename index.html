@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a5c1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="テニス">
+  <title>テニス組み合わせ</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Main View -->
+    <div id="view-main" class="view active">
+      <header class="app-header">
+        <span class="header-title">テニス組み合わせ</span>
+        <span id="player-count" class="player-count"></span>
+        <button id="btn-add" class="btn-add" aria-label="プレイヤー追加">＋</button>
+      </header>
+      <main id="main-content">
+        <div id="courts"></div>
+        <section id="waiting-section" class="section hidden">
+          <h2 class="section-title">待機中</h2>
+          <div id="waiting-list" class="player-chips"></div>
+        </section>
+        <section id="players-section" class="section">
+          <h2 class="section-title">参加プレイヤー <span class="section-hint">タップで退場／復帰</span></h2>
+          <div id="players-list" class="player-chips"></div>
+          <p id="no-players" class="empty-msg hidden">＋ボタンでプレイヤーを追加してください</p>
+        </section>
+      </main>
+    </div>
+
+    <!-- Stats View -->
+    <div id="view-stats" class="view">
+      <header class="app-header">
+        <span class="header-title">統計</span>
+      </header>
+      <main id="stats-content">
+        <div id="stats-container"></div>
+        <p id="no-stats" class="empty-msg">まだデータがありません</p>
+      </main>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-view="main">
+        <span class="nav-label">コート</span>
+      </button>
+      <button class="nav-btn" data-view="stats">
+        <span class="nav-label">統計</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
