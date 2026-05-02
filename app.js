@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 4:10';
-const VERSION_NOTES = '参加人数ピッカーをコンパクトな4列グリッドに';
+const APP_VERSION = '2026/5/3 4:15';
+const VERSION_NOTES = '参加人数を4〜20に制限（ダブルス成立しないものは除外）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -759,7 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const validate = () => {
     const v = parseInt(input.dataset.value, 10);
-    btnStart.disabled = !(v >= 1 && v <= 20);
+    btnStart.disabled = !(v >= 4 && v <= 20);
   };
   validate();
 
@@ -784,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (popup) { closePopup(); return; }
     popup = document.createElement('div');
     popup.className = 'setup-popup';
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 4; i <= 20; i++) {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'setup-popup-item';
@@ -805,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnStart.addEventListener('click', () => {
     const count = parseInt(input.dataset.value, 10);
-    if (count >= 1 && count <= 20) {
+    if (count >= 4 && count <= 20) {
       setCount(null);
       initPlayers(count, selectedCourts);
     }
