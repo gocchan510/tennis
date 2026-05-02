@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 23:45';
-const VERSION_NOTES = '参加プレイヤーを統計タブでも常時表示';
+const APP_VERSION = '2026/5/3 0:10';
+const VERSION_NOTES = '途中参加・復帰の人を現メンバーと同じ優先度に揃える';
 
 // ── State ─────────────────────────────────────────
 //
@@ -41,16 +41,24 @@ function initPlayers(count, maxCourts) {
   state.sessionStarted = true;
   for (let i = 0; i < count; i++) {
     const id = state.nextId++;
-    state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
+    state.players[id] = { id, games: 0, actualGames: 0, active: true, pairs: {}, opponents: {} };
   }
   regenerateCombinations();
   saveState();
   render();
 }
 
+// Current minimum priority counter (`games`) across active players.
+// Used to level new joiners and returning players so they don't catch up.
+function currentMinGames() {
+  const others = activePlayers();
+  return others.length > 0 ? Math.min(...others.map(p => p.games)) : 0;
+}
+
 function addPlayer() {
   const id = state.nextId++;
-  state.players[id] = { id, games: 0, active: true, pairs: {}, opponents: {} };
+  const minGames = currentMinGames();
+  state.players[id] = { id, games: minGames, actualGames: 0, active: true, pairs: {}, opponents: {} };
   regenerateCombinations();
   saveState();
   render();
@@ -59,6 +67,10 @@ function addPlayer() {
 function toggleActive(id) {
   const p = state.players[id];
   if (!p) return;
+  if (!p.active) {
+    // Returning: level priority counter to current min (no catch-up advantage).
+    p.games = currentMinGames();
+  }
   p.active = !p.active;
   regenerateCombinations();
   saveState();
@@ -317,7 +329,10 @@ function applyCombination(combo) {
     const [p1, p2] = match.team1.map(id => state.players[id]);
     const [p3, p4] = match.team2.map(id => state.players[id]);
     if (!p1 || !p2 || !p3 || !p4) continue;
-    for (const p of [p1, p2, p3, p4]) p.games++;
+    for (const p of [p1, p2, p3, p4]) {
+      p.games++;
+      p.actualGames = (p.actualGames ?? 0) + 1;
+    }
     adj(p1, p2, 'pairs', 1); adj(p3, p4, 'pairs', 1);
     adj(p1, p3, 'opponents', 1); adj(p1, p4, 'opponents', 1);
     adj(p2, p3, 'opponents', 1); adj(p2, p4, 'opponents', 1);
@@ -334,7 +349,10 @@ function revertCombination(combo) {
     const [p1, p2] = match.team1.map(id => state.players[id]);
     const [p3, p4] = match.team2.map(id => state.players[id]);
     if (!p1 || !p2 || !p3 || !p4) continue;
-    for (const p of [p1, p2, p3, p4]) p.games = Math.max(0, p.games - 1);
+    for (const p of [p1, p2, p3, p4]) {
+      p.games = Math.max(0, p.games - 1);
+      p.actualGames = Math.max(0, (p.actualGames ?? 0) - 1);
+    }
     adj(p1, p2, 'pairs'); adj(p3, p4, 'pairs');
     adj(p1, p3, 'opponents'); adj(p1, p4, 'opponents');
     adj(p2, p3, 'opponents'); adj(p2, p4, 'opponents');
@@ -367,7 +385,7 @@ function makeChip(p) {
   const id = el('span', 'chip-id');
   id.textContent = String(p.id);
   const games = el('span', 'chip-games');
-  games.textContent = `${p.games}試合`;
+  games.textContent = `${p.actualGames ?? p.games}試合`;
   chip.append(id, games);
   chip.addEventListener('click', () => toggleActive(p.id));
   return chip;
@@ -544,7 +562,7 @@ function renderWaiting(inMatchIds) {
     const id = el('span', 'chip-id');
     id.textContent = String(p.id);
     const games = el('span', 'chip-games');
-    games.textContent = `${p.games}試合`;
+    games.textContent = `${p.actualGames ?? p.games}試合`;
     chip.append(id, games);
     list.appendChild(chip);
   });
@@ -606,7 +624,7 @@ function renderStats() {
     const badge = el('div', `stat-player-badge${p.active ? '' : ' inactive'}`);
     badge.textContent = String(p.id);
     const games = el('span', 'stat-games');
-    games.textContent = `${p.games}試合`;
+    games.textContent = `${p.actualGames ?? p.games}試合`;
     header.append(badge, games);
     if (!p.active) {
       const label = el('span', 'stat-inactive-label');
