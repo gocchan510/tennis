@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 0:30';
-const VERSION_NOTES = 'プレイヤー追加ボタンをチップ列内に移動';
+const APP_VERSION = '2026/5/3 0:45';
+const VERSION_NOTES = 'スタート画面で前セッションのリストが残らないように';
 
 // ── State ─────────────────────────────────────────
 //
@@ -429,6 +429,11 @@ function renderCourts() {
   const container = document.getElementById('courts');
   container.innerHTML = '';
 
+  if (!state.sessionStarted) {
+    document.getElementById('waiting-section').classList.add('hidden');
+    return;
+  }
+
   const active = activePlayers();
 
   if (active.length < 4) {
@@ -593,7 +598,10 @@ function renderPlayers() {
   const all = Object.values(state.players).sort((a, b) => a.id - b.id);
 
   list.innerHTML = '';
-  if (all.length === 0) { countEl.textContent = ''; return; }
+  if (!state.sessionStarted || all.length === 0) {
+    countEl.textContent = '';
+    return;
+  }
 
   all.forEach(p => list.appendChild(makeChip(p)));
   list.appendChild(makeAddChip());
