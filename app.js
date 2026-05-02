@@ -2,24 +2,30 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/2 21:35';
-const VERSION_NOTES = 'ペア回数・対戦回数を別々に均等化';
+const APP_VERSION = '2026/5/2 22:30';
+const VERSION_NOTES = '終了ボタン廃止、進捗マーカーをドラッグして消化';
 
 // ── State ─────────────────────────────────────────
 //
 // players:      { [id]: { id, games, active, pairs: {[id]: n}, opponents: {[id]: n} } }
 // combinations: [{ courts: [{court, team1:[id,id], team2:[id,id]}] }]
+// markerPos:    number of combinations already played (0 = nothing yet)
 
-let state = { players: {}, nextId: 1, combinations: [], maxCourts: 1, sessionStarted: false };
+const FRESH_STATE = () => ({
+  players: {}, nextId: 1, combinations: [], maxCourts: 1,
+  sessionStarted: false, markerPos: 0,
+});
+
+let state = FRESH_STATE();
 
 // ── Persistence ───────────────────────────────────
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw);
+    if (raw) state = { ...FRESH_STATE(), ...JSON.parse(raw) };
   } catch (_) {
-    state = { players: {}, nextId: 1, combinations: [], maxCourts: 1, sessionStarted: false };
+    state = FRESH_STATE();
   }
 }
 
@@ -30,9 +36,7 @@ function saveState() {
 // ── Player management ─────────────────────────────
 
 function initPlayers(count, maxCourts) {
-  state.players = {};
-  state.nextId = 1;
-  state.combinations = [];
+  state = FRESH_STATE();
   state.maxCourts = maxCourts;
   state.sessionStarted = true;
   for (let i = 0; i < count; i++) {
@@ -209,44 +213,42 @@ function nextCombo2Courts(rf, vcm, vpairs, vopps) {
   };
 }
 
-function regenerateCombinations() {
+// Append `count` new combinations to state.combinations, simulated from
+// the current real player history (which already includes done rows).
+function appendCombinations(count) {
   const active = activePlayers();
   const numCourts = Math.min(state.maxCourts ?? 1, Math.floor(active.length / 4));
-  state.combinations = [];
   if (!numCourts) return;
 
   const needed = numCourts * 4;
   if (active.length < needed) return;
 
-  // Virtual counters seeded from real history.
   const vg = new Map();
   for (const p of active) vg.set(p.id, p.games);
 
-  // Pairs and court-mate (pairs + opponents) counts. Stored once per pair using
-  // p.id < otherId to avoid double-counting from both sides.
   const vpairs = new Map();
   const vopps = new Map();
   const vcm = new Map();
   for (const p of active) {
-    for (const [otherIdStr, count] of Object.entries(p.pairs || {})) {
-      const otherId = +otherIdStr;
-      if (p.id < otherId) {
-        const k = pairKey(p.id, otherId);
-        vpairs.set(k, count);
-        vcm.set(k, (vcm.get(k) || 0) + count);
+    for (const [otherIdStr, c] of Object.entries(p.pairs || {})) {
+      const o = +otherIdStr;
+      if (p.id < o) {
+        const k = pairKey(p.id, o);
+        vpairs.set(k, c);
+        vcm.set(k, (vcm.get(k) || 0) + c);
       }
     }
-    for (const [otherIdStr, count] of Object.entries(p.opponents || {})) {
-      const otherId = +otherIdStr;
-      if (p.id < otherId) {
-        const k = pairKey(p.id, otherId);
-        vopps.set(k, count);
-        vcm.set(k, (vcm.get(k) || 0) + count);
+    for (const [otherIdStr, c] of Object.entries(p.opponents || {})) {
+      const o = +otherIdStr;
+      if (p.id < o) {
+        const k = pairKey(p.id, o);
+        vopps.set(k, c);
+        vcm.set(k, (vcm.get(k) || 0) + c);
       }
     }
   }
 
-  for (let i = 0; i < MAX_COMBOS; i++) {
+  for (let i = 0; i < count; i++) {
     const rf = computeRF(active, vg, needed);
     if (!rf) break;
 
@@ -257,7 +259,6 @@ function regenerateCombinations() {
 
     state.combinations.push(combo);
 
-    // Update virtual state for next iteration.
     for (const court of combo.courts) {
       const ids = [...court.team1, ...court.team2];
       for (const id of ids) vg.set(id, vg.get(id) + 1);
@@ -281,32 +282,62 @@ function regenerateCombinations() {
   }
 }
 
-// ── Record a combination ──────────────────────────
+// Keep done rows (above marker) intact, regenerate everything below to
+// always have ~MAX_COMBOS rows ahead of the marker.
+function regenerateCombinations() {
+  if (state.markerPos > state.combinations.length) {
+    state.markerPos = state.combinations.length;
+  }
+  state.combinations = state.combinations.slice(0, state.markerPos);
+  const need = (state.markerPos + MAX_COMBOS) - state.combinations.length;
+  if (need > 0) appendCombinations(need);
+}
 
-function recordCombination(idx) {
-  const combo = state.combinations[idx];
-  if (!combo) return;
+// ── Apply / revert recorded combinations ──────────
 
-  const inc = (a, b) => {
-    a.pairs[b.id] = (a.pairs[b.id] ?? 0) + 1;
-    b.pairs[a.id] = (b.pairs[a.id] ?? 0) + 1;
+function applyCombination(combo) {
+  const adj = (a, b, key, d) => {
+    if (!a || !b) return;
+    a[key][b.id] = Math.max(0, (a[key][b.id] ?? 0) + d);
+    b[key][a.id] = Math.max(0, (b[key][a.id] ?? 0) + d);
   };
-  const incOpp = (a, b) => {
-    a.opponents[b.id] = (a.opponents[b.id] ?? 0) + 1;
-    b.opponents[a.id] = (b.opponents[a.id] ?? 0) + 1;
-  };
-
   for (const match of combo.courts) {
     const [p1, p2] = match.team1.map(id => state.players[id]);
     const [p3, p4] = match.team2.map(id => state.players[id]);
     if (!p1 || !p2 || !p3 || !p4) continue;
     for (const p of [p1, p2, p3, p4]) p.games++;
-    inc(p1, p2); inc(p3, p4);
-    incOpp(p1, p3); incOpp(p1, p4);
-    incOpp(p2, p3); incOpp(p2, p4);
+    adj(p1, p2, 'pairs', 1); adj(p3, p4, 'pairs', 1);
+    adj(p1, p3, 'opponents', 1); adj(p1, p4, 'opponents', 1);
+    adj(p2, p3, 'opponents', 1); adj(p2, p4, 'opponents', 1);
   }
+}
 
-  regenerateCombinations();
+function revertCombination(combo) {
+  const adj = (a, b, key) => {
+    if (!a || !b) return;
+    a[key][b.id] = Math.max(0, (a[key][b.id] ?? 0) - 1);
+    b[key][a.id] = Math.max(0, (b[key][a.id] ?? 0) - 1);
+  };
+  for (const match of combo.courts) {
+    const [p1, p2] = match.team1.map(id => state.players[id]);
+    const [p3, p4] = match.team2.map(id => state.players[id]);
+    if (!p1 || !p2 || !p3 || !p4) continue;
+    for (const p of [p1, p2, p3, p4]) p.games = Math.max(0, p.games - 1);
+    adj(p1, p2, 'pairs'); adj(p3, p4, 'pairs');
+    adj(p1, p3, 'opponents'); adj(p1, p4, 'opponents');
+    adj(p2, p3, 'opponents'); adj(p2, p4, 'opponents');
+  }
+}
+
+function commitMarkerChange(oldPos, newPos) {
+  if (newPos > oldPos) {
+    for (let i = oldPos; i < newPos; i++) applyCombination(state.combinations[i]);
+  } else if (newPos < oldPos) {
+    for (let i = oldPos - 1; i >= newPos; i--) revertCombination(state.combinations[i]);
+  }
+  // Keep ~MAX_COMBOS rows ahead of marker; extend if running low.
+  const need = (state.markerPos + MAX_COMBOS) - state.combinations.length;
+  if (need > 0) appendCombinations(need);
   saveState();
   render();
 }
@@ -378,30 +409,116 @@ function renderCourts() {
     return;
   }
 
-  const allIds = state.combinations.length > 0
-    ? new Set(state.combinations[0].courts.flatMap(m => [...m.team1, ...m.team2]))
+  // The "next" un-played match drives the waiting list.
+  const nextIdx = state.markerPos;
+  const allIds = nextIdx < state.combinations.length
+    ? new Set(state.combinations[nextIdx].courts.flatMap(m => [...m.team1, ...m.team2]))
     : new Set();
 
   state.combinations.forEach((combo, idx) => {
     const card = el('div', 'combo-card');
-    const body = el('div', 'combo-body');
+    if (idx < state.markerPos) card.classList.add('done');
 
+    const body = el('div', 'combo-body');
     const courts = el('div', 'combo-courts');
     for (const m of combo.courts) {
       courts.appendChild(makeMatchRow(m.court, m.team1, m.team2));
     }
     body.appendChild(courts);
-
-    const btn = el('button', 'btn-record');
-    btn.textContent = '終了';
-    btn.addEventListener('click', () => recordCombination(idx));
-    body.appendChild(btn);
-
     card.appendChild(body);
     container.appendChild(card);
   });
 
+  // Progress marker (▼ handle on the left gutter, draggable).
+  const marker = el('div', 'combo-marker');
+  marker.id = 'combo-marker';
+  const handle = el('div', 'marker-handle');
+  handle.textContent = '▼';
+  marker.appendChild(handle);
+  container.appendChild(marker);
+  setupMarkerDrag(marker, handle);
+  requestAnimationFrame(() => updateMarkerPosition());
+
   renderWaiting(allIds);
+}
+
+// ── Progress marker ──────────────────────────────
+
+function getCardRects() {
+  return [...document.querySelectorAll('#courts .combo-card')]
+    .map(c => c.getBoundingClientRect());
+}
+
+function calcMarkerPosFromY(y) {
+  const rects = getCardRects();
+  for (let i = 0; i < rects.length; i++) {
+    const center = rects[i].top + rects[i].height / 2;
+    if (y < center) return i;
+  }
+  return rects.length;
+}
+
+function updateMarkerPosition() {
+  const marker = document.getElementById('combo-marker');
+  if (!marker) return;
+  const courts = document.getElementById('courts');
+  const rects = getCardRects();
+  if (rects.length === 0) { marker.style.display = 'none'; return; }
+  marker.style.display = '';
+
+  const pos = Math.min(state.markerPos, rects.length);
+  const courtsRect = courts.getBoundingClientRect();
+  let y;
+  if (pos === 0) {
+    y = rects[0].top - courtsRect.top - 7;
+  } else if (pos >= rects.length) {
+    y = rects[rects.length - 1].bottom - courtsRect.top + 7;
+  } else {
+    y = ((rects[pos - 1].bottom + rects[pos].top) / 2) - courtsRect.top;
+  }
+  marker.style.top = y + 'px';
+}
+
+function updateDoneClasses() {
+  document.querySelectorAll('#courts .combo-card').forEach((c, i) => {
+    c.classList.toggle('done', i < state.markerPos);
+  });
+}
+
+function setupMarkerDrag(marker, handle) {
+  let active = false;
+  let startPos = 0;
+
+  handle.addEventListener('pointerdown', e => {
+    if (state.combinations.length === 0) return;
+    active = true;
+    startPos = state.markerPos;
+    handle.setPointerCapture(e.pointerId);
+    marker.classList.add('dragging');
+    e.preventDefault();
+  });
+
+  handle.addEventListener('pointermove', e => {
+    if (!active) return;
+    const newPos = calcMarkerPosFromY(e.clientY);
+    if (newPos !== state.markerPos) {
+      state.markerPos = newPos;
+      updateDoneClasses();
+      updateMarkerPosition();
+    }
+  });
+
+  const finish = (e) => {
+    if (!active) return;
+    active = false;
+    try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+    marker.classList.remove('dragging');
+    if (state.markerPos !== startPos) {
+      commitMarkerChange(startPos, state.markerPos);
+    }
+  };
+  handle.addEventListener('pointerup', finish);
+  handle.addEventListener('pointercancel', finish);
 }
 
 function renderWaiting(inMatchIds) {
