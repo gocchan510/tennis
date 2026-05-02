@@ -1,12 +1,12 @@
 {
-  "name": "テニス組み合わせ",
-  "short_name": "テニス",
+  "name": "球縁",
+  "short_name": "球縁",
   "description": "テニスダブルスの組み合わせを管理するアプリ",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#1a5c1a",
+  "background_color": "#FAF7F0",
+  "theme_color": "#143020",
   "icons": [
     {
       "src": "icon.svg",
