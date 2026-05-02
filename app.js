@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 5:30';
-const VERSION_NOTES = 'ピッカーのスマホ表示修正';
+const APP_VERSION = '2026/5/3 6:00';
+const VERSION_NOTES = 'コート行の横はみ出し修正';
 
 // ── State ─────────────────────────────────────────
 //

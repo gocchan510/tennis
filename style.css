@@ -276,14 +276,16 @@ main {
 /* ── Combo body ──────────────────────────── */
 
 .combo-body {
-  padding: 4px 14px 4px 16px;
+  padding: 4px 10px 4px 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .combo-courts {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -291,20 +293,21 @@ main {
 .combo-court-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 4px 0;
   border-bottom: 1px solid var(--line-soft);
+  min-width: 0;
 }
 .combo-court-row:last-of-type { border-bottom: none; }
 
 .combo-court-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   color: var(--cream);
   background: var(--court);
-  padding: 4px 9px;
-  border-radius: 12px;
+  padding: 3px 7px;
+  border-radius: 10px;
   white-space: nowrap;
   flex-shrink: 0;
   text-transform: uppercase;
@@ -314,8 +317,9 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 5px;
   flex: 1;
+  min-width: 0;
 }
 
 /* ── Player badges ────────────────────────── */
@@ -323,7 +327,7 @@ main {
 .team {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .player-badge {
@@ -346,27 +350,27 @@ main {
 }
 
 .player-badge.sm {
-  min-width: 42px;
-  height: 42px;
-  font-size: 17px;
-  border-radius: 21px;
+  min-width: 34px;
+  height: 34px;
+  font-size: 14px;
+  border-radius: 17px;
   border-width: 1.5px;
 }
 
 .team-amp {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--ink-faint);
   font-weight: 300;
 }
 
 .vs-label {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   font-style: italic;
   color: var(--brass);
-  padding: 0 4px;
-  letter-spacing: 0.14em;
+  padding: 0 2px;
+  letter-spacing: 0.1em;
   text-transform: lowercase;
 }
 
