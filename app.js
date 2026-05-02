@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 1:30';
-const VERSION_NOTES = '2面・大人数のスタート時の重さを改善（候補が多い時はサンプリング）';
+const APP_VERSION = '2026/5/3 2:00';
+const VERSION_NOTES = 'デザイン刷新（ベルベット緑＋ブラスアクセント）';
 
 // ── State ─────────────────────────────────────────
 //
