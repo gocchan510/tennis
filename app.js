@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 11:00';
-const VERSION_NOTES = 'セッションを常時履歴に保存、起動時は設定画面から復元';
+const APP_VERSION = '2026/5/3 11:30';
+const VERSION_NOTES = '連続出場をなるべく均等化';
 
 // ── State ─────────────────────────────────────────
 //
@@ -241,16 +241,19 @@ function computeRF(active, vg, needed) {
   return null;
 }
 
-// Pick the next combo for 1 court: best filler subset by court-mate score.
-function nextCombo1Court(rf, vcm, vpairs, vopps) {
+// Pick the next combo for 1 court: best filler subset by court-mate score,
+// with vstreak (consecutive plays) as tiebreaker — prefer choosing players
+// with lower streak so long-streaked players get a rest sooner.
+function nextCombo1Court(rf, vcm, vpairs, vopps, vstreak) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
-  let tied = [];
-  let bestScore = Infinity;
+  let bestCM = Infinity, bestST = Infinity, tied = [];
   for (const sub of fillerSubsets) {
     const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
-    const score = courtMateScore(pool, vcm);
-    if (score < bestScore) { bestScore = score; tied = [pool]; }
-    else if (score === bestScore) { tied.push(pool); }
+    const cm = courtMateScore(pool, vcm);
+    const st = sub.reduce((s, p) => s + (vstreak.get(p.id) || 0), 0);
+    if (cm < bestCM || (cm === bestCM && st < bestST)) {
+      bestCM = cm; bestST = st; tied = [pool];
+    } else if (cm === bestCM && st === bestST) { tied.push(pool); }
   }
   if (tied.length === 0) return null;
 
@@ -259,29 +262,30 @@ function nextCombo1Court(rf, vcm, vpairs, vopps) {
   return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
 }
 
-// Pick the next combo for 2 courts: best (filler × split) by total court-mate score.
-function nextCombo2Courts(rf, vcm, vpairs, vopps) {
+// Pick the next combo for 2 courts: best (filler × split) by total court-mate score,
+// with vstreak as tiebreaker within the filler selection.
+function nextCombo2Courts(rf, vcm, vpairs, vopps, vstreak) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
-  let tiedSplits = [];
-  let bestScore = Infinity;
+  let bestCM = Infinity, bestST = Infinity, tiedSplits = [];
 
   for (const sub of fillerSubsets) {
+    const subST = sub.reduce((s, p) => s + (vstreak.get(p.id) || 0), 0);
     const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
     const [anchor, ...rest] = pool;
     for (const trio of combinations(rest, 3)) {
       const c1 = [anchor, ...trio].sort((a, b) => a.id - b.id);
       const c1ids = new Set(c1.map(p => p.id));
       const c2 = pool.filter(p => !c1ids.has(p.id)).sort((a, b) => a.id - b.id);
-      const score = courtMateScore(c1, vcm) + courtMateScore(c2, vcm);
-      if (score < bestScore) { bestScore = score; tiedSplits = [{ c1, c2 }]; }
-      else if (score === bestScore) { tiedSplits.push({ c1, c2 }); }
+      const cm = courtMateScore(c1, vcm) + courtMateScore(c2, vcm);
+      if (cm < bestCM || (cm === bestCM && subST < bestST)) {
+        bestCM = cm; bestST = subST; tiedSplits = [{ c1, c2 }];
+      } else if (cm === bestCM && subST === bestST) { tiedSplits.push({ c1, c2 }); }
     }
   }
   if (tiedSplits.length === 0) return null;
 
   const bestSplit = tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
-
   const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps, false);
   const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps, false);
   return {
@@ -352,6 +356,10 @@ function appendCombinations(count) {
     }
   }
 
+  // vstreak: consecutive plays in this virtual simulation (starts at 0)
+  const vstreak = new Map();
+  for (const p of active) vstreak.set(p.id, 0);
+
   let satOutLastRound = new Set();
 
   for (let i = 0; i < count; i++) {
@@ -367,8 +375,8 @@ function appendCombinations(count) {
       const rf = computeRF(active, vg, needed);
       if (!rf) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
       combo = numCourts === 1
-        ? nextCombo1Court(rf, vcm, vpairs, vopps)
-        : nextCombo2Courts(rf, vcm, vpairs, vopps);
+        ? nextCombo1Court(rf, vcm, vpairs, vopps, vstreak)
+        : nextCombo2Courts(rf, vcm, vpairs, vopps, vstreak);
       if (!combo) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
     }
 
@@ -397,6 +405,11 @@ function appendCombinations(count) {
           vopps.set(k, (vopps.get(k) || 0) + 1);
         }
       }
+    }
+
+    // Update vstreak: played → +1, sat out → reset to 0
+    for (const p of active) {
+      vstreak.set(p.id, playedIds.has(p.id) ? (vstreak.get(p.id) || 0) + 1 : 0);
     }
 
     satOutLastRound = new Set(active.filter(p => !playedIds.has(p.id)).map(p => p.id));
