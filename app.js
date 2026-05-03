@@ -4,7 +4,7 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 10:00';
+const APP_VERSION = '2026/5/3 10:10';
 const VERSION_NOTES = '直近3セッションの履歴保存・復元機能';
 
 // ── State ─────────────────────────────────────────
@@ -40,7 +40,7 @@ function loadHistory() {
 }
 
 function pushHistory() {
-  if (!state.sessionStarted || state.markerPos === 0) return;
+  if (!state.sessionStarted) return;
   const entry = {
     savedAt: new Date().toISOString(),
     maxCourts: state.maxCourts,
