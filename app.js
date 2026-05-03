@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 12:00';
-const VERSION_NOTES = 'sequential順序バグ修正（vg優先ソート）';
+const APP_VERSION = '2026/5/3 12:30';
+const VERSION_NOTES = '戻るボタンの挙動を修正';
 
 // ── State ─────────────────────────────────────────
 //
@@ -831,38 +831,35 @@ function switchView(view) {
 }
 
 function setupNav() {
-  // Seed history with main so there's always something to pop back to.
-  history.replaceState({ view: 'main' }, '');
+  // Push one extra history entry so the first back press fires popstate
+  // instead of leaving the app.
+  history.pushState({ app: true }, '');
 
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const view = btn.dataset.view;
-      if (view !== 'main') history.pushState({ view }, '');
-      else history.replaceState({ view: 'main' }, '');
-      switchView(view);
-    });
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
 
-  window.addEventListener('popstate', (e) => {
-    // Priority 1: close open picker popup
+  window.addEventListener('popstate', () => {
+    // React to back press based on current UI state, not on e.state.
+    // Each handled case re-pushes a state so the next back press still
+    // goes through this handler.
     const popup = document.querySelector('.setup-popup');
     if (popup) {
       popup.remove();
-      history.pushState({ view: 'main' }, '');
+      history.pushState({ app: true }, '');
       return;
     }
-    // Priority 2: stats tab → back to main
-    const view = e.state?.view ?? 'main';
-    if (view !== 'main') {
+    if (document.getElementById('view-stats').classList.contains('active')) {
       switchView('main');
-      history.replaceState({ view: 'main' }, '');
+      history.pushState({ app: true }, '');
       return;
     }
-    // Priority 3: in session on main → reset (same as reset button)
     if (state.sessionStarted) {
-      history.pushState({ view: 'main' }, ''); // keep history intact for next back
       resetSession();
+      history.pushState({ app: true }, '');
+      return;
     }
+    // Setup screen with no overlay → let the browser actually navigate back
   });
 }
 
