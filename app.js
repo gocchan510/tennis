@@ -4,18 +4,19 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 10:30';
-const VERSION_NOTES = 'タブを閉じても自動復元';
+const APP_VERSION = '2026/5/3 11:00';
+const VERSION_NOTES = 'セッションを常時履歴に保存、起動時は設定画面から復元';
 
 // ── State ─────────────────────────────────────────
 //
 // players:      { [id]: { id, games, active, pairs: {[id]: n}, opponents: {[id]: n} } }
 // combinations: [{ courts: [{court, team1:[id,id], team2:[id,id]}] }]
 // markerPos:    number of combinations already played (0 = nothing yet)
+// sessionId:    unique ID (timestamp) assigned when session starts
 
 const FRESH_STATE = () => ({
   players: {}, nextId: 1, combinations: [], maxCourts: 1,
-  sessionStarted: false, markerPos: 0,
+  sessionStarted: false, markerPos: 0, sessionId: null,
 });
 
 let state = FRESH_STATE();
@@ -33,15 +34,18 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  syncHistory();
 }
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch (_) { return []; }
 }
 
-function pushHistory() {
-  if (!state.sessionStarted) return;
+// Upsert the current session into history on every save.
+function syncHistory() {
+  if (!state.sessionStarted || !state.sessionId) return;
   const entry = {
+    sessionId: state.sessionId,
     savedAt: new Date().toISOString(),
     maxCourts: state.maxCourts,
     playerCount: Object.keys(state.players).length,
@@ -49,16 +53,25 @@ function pushHistory() {
     snapshot: JSON.stringify(state),
   };
   const hist = loadHistory();
-  hist.unshift(entry);
-  if (hist.length > MAX_HISTORY) hist.length = MAX_HISTORY;
+  const idx = hist.findIndex(h => h.sessionId === state.sessionId);
+  if (idx >= 0) hist[idx] = entry;
+  else { hist.unshift(entry); if (hist.length > MAX_HISTORY) hist.length = MAX_HISTORY; }
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+}
+
+// Remove the current session from history (used on explicit reset).
+function removeFromHistory() {
+  if (!state.sessionId) return;
+  const hist = loadHistory().filter(h => h.sessionId !== state.sessionId);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
 }
 
 // ── Player management ─────────────────────────────
 
 function initPlayers(count, maxCourts) {
-  pushHistory();
+  // Current session stays in history as-is; start fresh with new ID.
   state = FRESH_STATE();
+  state.sessionId = new Date().toISOString();
   state.maxCourts = maxCourts;
   state.sessionStarted = true;
   for (let i = 0; i < count; i++) {
@@ -664,14 +677,10 @@ function renderHistory() {
     card.append(left, restore);
 
     card.addEventListener('click', () => {
-      if (!confirm(`${dateStr} のセッションを復元しますか？\n現在のセッションは保存されます。`)) return;
-      pushHistory();
+      if (!confirm(`${dateStr} のセッションを復元しますか？`)) return;
       try {
         state = { ...FRESH_STATE(), ...JSON.parse(entry.snapshot) };
-        // Remove this entry from history so it's not duplicated
-        const h = loadHistory();
-        h.splice(idx, 1);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+        // Keep sessionId so syncHistory updates the same entry going forward
         saveState();
         render();
       } catch (_) {
@@ -693,7 +702,7 @@ function renderSetup() {
 function resetSession() {
   if (!state.sessionStarted) return;
   if (!confirm('セッションをリセットして最初の画面に戻ります。よろしいですか？')) return;
-  pushHistory();
+  removeFromHistory();
   state = FRESH_STATE();
   saveState();
   render();
@@ -848,7 +857,7 @@ function setupNav() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
-  // sessionStarted is kept as-is from localStorage so tab-close restores the session
+  state.sessionStarted = false; // always show setup on open; restore via history cards
 
   document.getElementById('version-label').textContent =
     `${APP_VERSION} 〜 ${VERSION_NOTES}`;
