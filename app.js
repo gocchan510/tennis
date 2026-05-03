@@ -2,8 +2,8 @@
 
 const STORAGE_KEY = 'tennis_v1';
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 8:45';
-const VERSION_NOTES = 'バックボタンでセットアップ画面に戻る';
+const APP_VERSION = '2026/5/3 9:00';
+const VERSION_NOTES = '2回連続休憩を防止';
 
 // ── State ─────────────────────────────────────────
 //
@@ -263,7 +263,7 @@ function nextCombo2Courts(rf, vcm, vpairs, vopps) {
 function sequentialCombo(active, vg, numCourts, vpairs, vopps) {
   const needed = numCourts * 4;
   const unplayed = [...active]
-    .filter(p => vg.get(p.id) === 0)
+    .filter(p => vg.get(p.id) <= 0)
     .sort((a, b) => a.id - b.id);
   if (unplayed.length < needed) return null;
 
@@ -317,26 +317,35 @@ function appendCombinations(count) {
     }
   }
 
+  let satOutLastRound = new Set();
+
   for (let i = 0; i < count; i++) {
-    // Sequential phase: assign unplayed players in ID order until exhausted
+    // Boost players who sat out last round: vg-1 so they rank below everyone else
+    for (const id of satOutLastRound) vg.set(id, vg.get(id) - 1);
+
+    // Sequential phase: assign unplayed (vg<=0) players in ID order until exhausted
     const seqCombo = sequentialCombo(active, vg, numCourts, vpairs, vopps);
     let combo;
     if (seqCombo) {
       combo = seqCombo;
     } else {
       const rf = computeRF(active, vg, needed);
-      if (!rf) break;
+      if (!rf) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
       combo = numCourts === 1
         ? nextCombo1Court(rf, vcm, vpairs, vopps)
         : nextCombo2Courts(rf, vcm, vpairs, vopps);
-      if (!combo) break;
+      if (!combo) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
     }
+
+    // Undo boost before recording vg increments
+    for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
 
     state.combinations.push(combo);
 
+    const playedIds = new Set();
     for (const court of combo.courts) {
       const ids = [...court.team1, ...court.team2];
-      for (const id of ids) vg.set(id, vg.get(id) + 1);
+      for (const id of ids) { vg.set(id, vg.get(id) + 1); playedIds.add(id); }
       for (let a = 0; a < ids.length; a++) {
         for (let b = a + 1; b < ids.length; b++) {
           const k = pairKey(ids[a], ids[b]);
@@ -354,6 +363,8 @@ function appendCombinations(count) {
         }
       }
     }
+
+    satOutLastRound = new Set(active.filter(p => !playedIds.has(p.id)).map(p => p.id));
   }
 }
 
