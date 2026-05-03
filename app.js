@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 11:30';
-const VERSION_NOTES = '連続出場をなるべく均等化';
+const APP_VERSION = '2026/5/3 12:00';
+const VERSION_NOTES = 'sequential順序バグ修正（vg優先ソート）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -303,7 +303,7 @@ function sequentialCombo(active, vg, numCourts, vpairs, vopps) {
   const needed = numCourts * 4;
   const unplayed = [...active]
     .filter(p => vg.get(p.id) <= 0)
-    .sort((a, b) => a.id - b.id);
+    .sort((a, b) => (vg.get(a.id) - vg.get(b.id)) || (a.id - b.id));
   if (unplayed.length < needed) return null;
 
   const batch = unplayed.slice(0, needed);
