@@ -919,6 +919,73 @@ main {
   letter-spacing: 0.06em;
 }
 
+/* ── Session history ──────────────────────── */
+
+#session-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.history-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.history-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  gap: 8px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.history-card:active {
+  background: var(--court-soft);
+  border-color: var(--court);
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.history-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: var(--font-display);
+}
+
+.history-meta {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.history-restore {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brass);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* ── Utilities ────────────────────────────── */
 
 .hidden { display: none !important; }

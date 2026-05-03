@@ -1,9 +1,11 @@
 'use strict';
 
 const STORAGE_KEY = 'tennis_v1';
+const HISTORY_KEY = 'tennis_history_v1';
+const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 9:00';
-const VERSION_NOTES = '2回連続休憩を防止';
+const APP_VERSION = '2026/5/3 10:00';
+const VERSION_NOTES = '直近3セッションの履歴保存・復元機能';
 
 // ── State ─────────────────────────────────────────
 //
@@ -33,9 +35,29 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch (_) { return []; }
+}
+
+function pushHistory() {
+  if (!state.sessionStarted || state.markerPos === 0) return;
+  const entry = {
+    savedAt: new Date().toISOString(),
+    maxCourts: state.maxCourts,
+    playerCount: Object.keys(state.players).length,
+    markerPos: state.markerPos,
+    snapshot: JSON.stringify(state),
+  };
+  const hist = loadHistory();
+  hist.unshift(entry);
+  if (hist.length > MAX_HISTORY) hist.length = MAX_HISTORY;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+}
+
 // ── Player management ─────────────────────────────
 
 function initPlayers(count, maxCourts) {
+  pushHistory();
   state = FRESH_STATE();
   state.maxCourts = maxCourts;
   state.sessionStarted = true;
@@ -614,16 +636,64 @@ function setupMarkerDrag(marker, handle) {
 
 // ── Render: setup screen ─────────────────────────
 
+function renderHistory() {
+  const container = document.getElementById('session-history');
+  container.innerHTML = '';
+  const hist = loadHistory();
+  if (hist.length === 0) return;
+
+  const label = el('div', 'history-label');
+  label.textContent = '直近のセッション';
+  container.appendChild(label);
+
+  hist.forEach((entry, idx) => {
+    const d = new Date(entry.savedAt);
+    const dateStr = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const card = el('button', 'history-card');
+    card.type = 'button';
+
+    const left = el('div', 'history-info');
+    const dateEl = el('span', 'history-date');
+    dateEl.textContent = dateStr;
+    const meta = el('span', 'history-meta');
+    meta.textContent = `${entry.playerCount}人・${entry.maxCourts}面・${entry.markerPos}試合`;
+    left.append(dateEl, meta);
+
+    const restore = el('span', 'history-restore');
+    restore.textContent = '復元';
+    card.append(left, restore);
+
+    card.addEventListener('click', () => {
+      if (!confirm(`${dateStr} のセッションを復元しますか？\n現在のセッションは保存されます。`)) return;
+      pushHistory();
+      try {
+        state = { ...FRESH_STATE(), ...JSON.parse(entry.snapshot) };
+        // Remove this entry from history so it's not duplicated
+        const h = loadHistory();
+        h.splice(idx, 1);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+        saveState();
+        render();
+      } catch (_) {
+        alert('復元に失敗しました');
+      }
+    });
+    container.appendChild(card);
+  });
+}
+
 function renderSetup() {
   const inSession = state.sessionStarted === true;
   document.getElementById('setup-screen').classList.toggle('hidden', inSession);
   document.getElementById('players-section').classList.toggle('hidden', !inSession);
   document.getElementById('btn-reset').classList.toggle('hidden', !inSession);
+  if (!inSession) renderHistory();
 }
 
 function resetSession() {
   if (!state.sessionStarted) return;
-  if (!confirm('セッションをリセットして最初の画面に戻ります。履歴もすべて消えます。よろしいですか？')) return;
+  if (!confirm('セッションをリセットして最初の画面に戻ります。よろしいですか？')) return;
+  pushHistory();
   state = FRESH_STATE();
   saveState();
   render();
