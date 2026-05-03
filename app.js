@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 10:10';
-const VERSION_NOTES = '直近3セッションの履歴保存・復元機能';
+const APP_VERSION = '2026/5/3 10:30';
+const VERSION_NOTES = 'タブを閉じても自動復元';
 
 // ── State ─────────────────────────────────────────
 //
@@ -848,7 +848,7 @@ function setupNav() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
-  state.sessionStarted = false;
+  // sessionStarted is kept as-is from localStorage so tab-close restores the session
 
   document.getElementById('version-label').textContent =
     `${APP_VERSION} 〜 ${VERSION_NOTES}`;
