@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/3 12:30';
-const VERSION_NOTES = '戻るボタンの挙動を修正';
+const APP_VERSION = '2026/5/4 00:00';
+const VERSION_NOTES = 'セットアップ画面の履歴カードを縦並びに修正';
 
 // ── State ─────────────────────────────────────────
 //

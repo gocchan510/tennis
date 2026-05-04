@@ -694,8 +694,10 @@ main {
 
 .setup-screen {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 24px;
   padding: 32px 4px;
 }
 
