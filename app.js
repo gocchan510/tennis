@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/4 11:00';
-const VERSION_NOTES = '統計：全プレイヤーを0から表示するチップ形式に変更';
+const APP_VERSION = '2026/5/5 09:00';
+const VERSION_NOTES = 'UIリファクタ Step1+2: デザイントークン整理・コート画面洗練';
 
 // ── State ─────────────────────────────────────────
 //
