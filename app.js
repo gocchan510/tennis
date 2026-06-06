@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/6 12:00';
-const VERSION_NOTES = 'コード左に試合番号を表示';
+const APP_VERSION = '2026/6/6 13:00';
+const VERSION_NOTES = 'ペア単位LRUを追加: 同カウント時に個別ペアの連続も防止';
 
 // ── State ─────────────────────────────────────────
 //
@@ -265,7 +265,7 @@ function computeRF(active, vg, needed) {
 //   2. repeated-opponent penalty  Σ vopps²   (secondary — vary opponents when pairs repeat)
 //   3. consecutive-play penalty    Σ vstreak  (tertiary — rest long-streaked players)
 // Random among full ties → maximum variety while honoring the above.
-function nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast) {
+function nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast, vlastPair) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
   // Teammate + opponent penalty for a candidate set of courts.
@@ -282,10 +282,19 @@ function nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast) {
 
   let bestKey = null, ties = [];
   const consider = (courts, streak) => {
-    // 4th element: round index when this exact combo was last used (-1 = never).
-    // Smaller = older = preferred, so ties always resolve to the least-recently-used combo.
+    // 4th element: most-recently-used individual teammate pair (-1 = never used).
+    // Minimising this ensures that when pair counts tie, we pick the pairing
+    // whose most recently used pair was used in the oldest round.
+    let maxPairLast = -1;
+    for (const ct of courts) {
+      const p1 = vlastPair.get(pairKey(ct.team1[0].id, ct.team1[1].id)) ?? -1;
+      const p2 = vlastPair.get(pairKey(ct.team2[0].id, ct.team2[1].id)) ?? -1;
+      if (p1 > maxPairLast) maxPairLast = p1;
+      if (p2 > maxPairLast) maxPairLast = p2;
+    }
+    // 5th element: full-combo recency (tiebreaker of last resort).
     const lastUsed = vlast.get(comboKey(courts)) ?? -1;
-    const key = [...scorePO(courts), streak, lastUsed];
+    const key = [...scorePO(courts), streak, maxPairLast, lastUsed];
     if (bestKey === null || cmpArr(key, bestKey) < 0) { bestKey = key; ties = [courts]; }
     else if (cmpArr(key, bestKey) === 0) ties.push(courts);
   };
@@ -373,12 +382,19 @@ function appendCombinations(count) {
   const vstreak = new Map();
   for (const p of active) vstreak.set(p.id, 0);
 
-  // vlast: comboKey → round index of last use. Seeded from played history so
-  // the LRU ordering is global (across all past sessions in this simulation).
+  // vlast: comboKey → round index of last use (full combo LRU).
+  // vlastPair: pairKey → round index of last use (individual teammate pair LRU).
+  // Both seeded from played history for global ordering.
   const vlast = new Map();
+  const vlastPair = new Map();
   let vlastRound = 0;
   for (const c of state.combinations) {
-    vlast.set(comboKey(c.courts), vlastRound++);
+    vlast.set(comboKey(c.courts), vlastRound);
+    for (const court of c.courts) {
+      vlastPair.set(pairKey(court.team1[0], court.team1[1]), vlastRound);
+      vlastPair.set(pairKey(court.team2[0], court.team2[1]), vlastRound);
+    }
+    vlastRound++;
   }
 
   let satOutLastRound = new Set();
@@ -398,12 +414,17 @@ function appendCombinations(count) {
       const rf = computeRF(active, vg, needed);
       if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
       if (!rf) break;
-      combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast);
+      combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast, vlastPair);
       if (!combo) break;
     }
 
     state.combinations.push(combo);
-    vlast.set(comboKey(combo.courts), vlastRound++);
+    vlast.set(comboKey(combo.courts), vlastRound);
+    for (const court of combo.courts) {
+      vlastPair.set(pairKey(court.team1[0], court.team1[1]), vlastRound);
+      vlastPair.set(pairKey(court.team2[0], court.team2[1]), vlastRound);
+    }
+    vlastRound++;
 
     const playedIds = new Set();
     for (const court of combo.courts) {
