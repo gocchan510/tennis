@@ -657,7 +657,21 @@ main {
   border-radius: var(--radius);
   border: 1px solid var(--line-soft);
   box-shadow: var(--shadow-xs);
-  padding: var(--sp-4) var(--sp-5);
+  padding: var(--sp-4) var(--sp-5) var(--sp-4) calc(var(--sp-5) + 6px);
+  position: relative;
+  overflow: hidden;
+}
+/* Left accent — same language as combo/history cards */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--sp-3);
+  bottom: var(--sp-3);
+  width: 2px;
+  background: linear-gradient(180deg, var(--court-mid) 0%, var(--court) 100%);
+  opacity: 0.40;
+  border-radius: 0 2px 2px 0;
 }
 
 .stat-card-header {
@@ -668,12 +682,12 @@ main {
 }
 
 .stat-player-badge {
-  min-width: 40px;
-  height: 40px;
+  min-width: 38px;
+  height: 38px;
   padding: 0 var(--sp-1);
-  border-radius: 20px;
+  border-radius: 19px;
   background: var(--court-soft);
-  border: 1.5px solid var(--court);
+  border: 1px solid rgba(31,74,44,0.30);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -681,6 +695,7 @@ main {
   font-size: var(--text-base);
   color: var(--court-deep);
   font-feature-settings: "tnum";
+  flex-shrink: 0;
 }
 
 .stat-player-badge.inactive {
@@ -691,17 +706,18 @@ main {
 
 .stat-games {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: 22px;
   font-weight: 600;
   color: var(--ink);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  line-height: 1;
 }
 
 .stat-inactive-label {
   font-size: var(--text-2xs);
   color: var(--ink-faint);
   margin-left: auto;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -939,32 +955,39 @@ main {
   align-self: flex-start;
 }
 
+/* Segmented control — pill floats inside a recessed track */
 .court-toggle {
   display: flex;
   width: 100%;
+  background: var(--cream-soft);
   border-radius: var(--radius);
-  overflow: hidden;
-  border: 1.5px solid var(--court);
+  border: 1px solid var(--line);
+  padding: 3px;
+  gap: 3px;
 }
 
 .court-toggle-btn {
   flex: 1;
-  padding: 13px;
+  padding: 11px;
   border: none;
+  border-radius: calc(var(--radius) - 3px);
   background: transparent;
   font-family: var(--font-display);
   font-size: var(--text-base);
   font-weight: 500;
-  color: var(--court);
-  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background var(--dur) var(--ease),
-              color       var(--dur) var(--ease);
+  transition: background  var(--dur) var(--ease),
+              color        var(--dur) var(--ease),
+              box-shadow   var(--dur) var(--ease);
 }
 
 .court-toggle-btn.active {
-  background: var(--court);
-  color: var(--cream);
+  background: var(--surface);
+  color: var(--court-deep);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-start {
@@ -1049,18 +1072,33 @@ main {
   background: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
-  padding: 10px var(--sp-4);
+  padding: 11px var(--sp-4) 11px calc(var(--sp-4) + 6px);
   cursor: pointer;
   text-align: left;
   width: 100%;
   gap: var(--sp-2);
+  position: relative;
+  overflow: hidden;
   transition: background     var(--dur-fast) var(--ease),
               border-color   var(--dur-fast) var(--ease);
+}
+/* Left accent — same language as combo cards */
+.history-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--sp-2);
+  bottom: var(--sp-2);
+  width: 2px;
+  background: linear-gradient(180deg, var(--court-mid) 0%, var(--court) 100%);
+  opacity: 0.35;
+  border-radius: 0 2px 2px 0;
 }
 .history-card:active {
   background: var(--court-soft);
   border-color: var(--court);
 }
+.history-card:active::before { opacity: 0.7; }
 
 .history-info {
   display: flex;
