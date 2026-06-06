@@ -361,23 +361,23 @@ function appendCombinations(count) {
   let satOutLastRound = new Set();
 
   for (let i = 0; i < count; i++) {
-    // Boost players who sat out last round: vg-1 so they rank below everyone else
-    for (const id of satOutLastRound) vg.set(id, vg.get(id) - 1);
-
-    // Sequential phase: assign unplayed (vg<=0) players in ID order until exhausted
+    // Sequential phase: assign truly-unplayed (vg=0, no boost yet) players in ID order.
     const seqCombo = sequentialCombo(active, vg, numCourts, vpairs, vopps);
     let combo;
     if (seqCombo) {
       combo = seqCombo;
     } else {
+      // Boost sat-out players (vg-1) only when fewer sat out than spots available.
+      // If satOutLastRound.size >= needed, all sat-out are already required by vg
+      // fairness alone; forcing them further isolates groups (e.g. 8p 1court).
+      const doBoost = satOutLastRound.size > 0 && satOutLastRound.size < needed;
+      if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) - 1);
       const rf = computeRF(active, vg, needed);
-      if (!rf) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
+      if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
+      if (!rf) break;
       combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak);
-      if (!combo) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
+      if (!combo) break;
     }
-
-    // Undo boost before recording vg increments
-    for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
 
     state.combinations.push(combo);
 
