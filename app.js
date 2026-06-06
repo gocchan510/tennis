@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/4 00:00';
-const VERSION_NOTES = 'セットアップ画面の履歴カードを縦並びに修正';
+const APP_VERSION = '2026/5/4 10:00';
+const VERSION_NOTES = '組み合わせをペア重複優先で最適化（同じ組のループを解消）／履歴カードを縦並びに';
 
 // ── State ─────────────────────────────────────────
 //
@@ -183,16 +183,22 @@ function fillerSubsetsFor(filler, fillerNeeded) {
     : sampleCombinations(filler, fillerNeeded, MAX_SUBSET_SAMPLES);
 }
 
-// Sum-of-squares of court-mate counts for all pairs within a court group.
-function courtMateScore(group, vcm) {
-  let s = 0;
-  for (let i = 0; i < group.length; i++) {
-    for (let j = i + 1; j < group.length; j++) {
-      const c = vcm.get(pairKey(group[i].id, group[j].id)) || 0;
-      s += c * c;
-    }
-  }
-  return s;
+function sq(x) { x = x || 0; return x * x; }
+
+// Lexicographic comparison of equal-length numeric score arrays.
+function cmpArr(a, b) {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i];
+  return 0;
+}
+
+// The 3 ways to split 4 players into two teams (returns player objects).
+function pairingsOf(four) {
+  const [a, b, c, d] = four;
+  return [
+    { team1: [a, b], team2: [c, d] },
+    { team1: [a, c], team2: [b, d] },
+    { team1: [a, d], team2: [b, c] },
+  ];
 }
 
 // Pick pairing minimizing both pair (teammate) and opponent counts.
@@ -241,58 +247,59 @@ function computeRF(active, vg, needed) {
   return null;
 }
 
-// Pick the next combo for 1 court: best filler subset by court-mate score,
-// with vstreak (consecutive plays) as tiebreaker — prefer choosing players
-// with lower streak so long-streaked players get a rest sooner.
-function nextCombo1Court(rf, vcm, vpairs, vopps, vstreak) {
-  const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
-  let bestCM = Infinity, bestST = Infinity, tied = [];
-  for (const sub of fillerSubsets) {
-    const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
-    const cm = courtMateScore(pool, vcm);
-    const st = sub.reduce((s, p) => s + (vstreak.get(p.id) || 0), 0);
-    if (cm < bestCM || (cm === bestCM && st < bestST)) {
-      bestCM = cm; bestST = st; tied = [pool];
-    } else if (cm === bestCM && st === bestST) { tied.push(pool); }
-  }
-  if (tied.length === 0) return null;
-
-  const best = tied[Math.floor(Math.random() * tied.length)];
-  const p = pickFairPairing(best, vpairs, vopps, false);
-  return { courts: [{ court: 1, team1: p.team1, team2: p.team2 }] };
-}
-
-// Pick the next combo for 2 courts: best (filler × split) by total court-mate score,
-// with vstreak as tiebreaker within the filler selection.
-function nextCombo2Courts(rf, vcm, vpairs, vopps, vstreak) {
+// Pick the next combo by scoring every candidate court assignment
+// (court split × team pairing) lexicographically:
+//   1. repeated-teammate penalty  Σ vpairs²  (primary — pair everyone before repeating)
+//   2. repeated-opponent penalty  Σ vopps²   (secondary — vary opponents when pairs repeat)
+//   3. consecutive-play penalty    Σ vstreak  (tertiary — rest long-streaked players)
+// Random among full ties → maximum variety while honoring the above.
+function nextComboFair(rf, numCourts, vpairs, vopps, vstreak) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
-  let bestCM = Infinity, bestST = Infinity, tiedSplits = [];
+  // Teammate + opponent penalty for a candidate set of courts.
+  const scorePO = (courts) => {
+    let ps = 0, os = 0;
+    for (const ct of courts) {
+      ps += sq(vpairs.get(pairKey(ct.team1[0].id, ct.team1[1].id)))
+          + sq(vpairs.get(pairKey(ct.team2[0].id, ct.team2[1].id)));
+      for (const a of ct.team1) for (const b of ct.team2)
+        os += sq(vopps.get(pairKey(a.id, b.id)));
+    }
+    return [ps, os];
+  };
+
+  let bestKey = null, ties = [];
+  const consider = (courts, streak) => {
+    const key = [...scorePO(courts), streak];
+    if (bestKey === null || cmpArr(key, bestKey) < 0) { bestKey = key; ties = [courts]; }
+    else if (cmpArr(key, bestKey) === 0) ties.push(courts);
+  };
 
   for (const sub of fillerSubsets) {
-    const subST = sub.reduce((s, p) => s + (vstreak.get(p.id) || 0), 0);
     const pool = [...rf.required, ...sub].sort((a, b) => a.id - b.id);
-    const [anchor, ...rest] = pool;
-    for (const trio of combinations(rest, 3)) {
-      const c1 = [anchor, ...trio].sort((a, b) => a.id - b.id);
-      const c1ids = new Set(c1.map(p => p.id));
-      const c2 = pool.filter(p => !c1ids.has(p.id)).sort((a, b) => a.id - b.id);
-      const cm = courtMateScore(c1, vcm) + courtMateScore(c2, vcm);
-      if (cm < bestCM || (cm === bestCM && subST < bestST)) {
-        bestCM = cm; bestST = subST; tiedSplits = [{ c1, c2 }];
-      } else if (cm === bestCM && subST === bestST) { tiedSplits.push({ c1, c2 }); }
+    const streak = pool.reduce((s, p) => s + (vstreak.get(p.id) || 0), 0);
+    if (numCourts === 1) {
+      for (const pr of pairingsOf(pool)) consider([pr], streak);
+    } else {
+      const [anchor, ...rest] = pool;
+      for (const trio of combinations(rest, 3)) {
+        const c1 = [anchor, ...trio].sort((a, b) => a.id - b.id);
+        const ids1 = new Set(c1.map(p => p.id));
+        const c2 = pool.filter(p => !ids1.has(p.id)).sort((a, b) => a.id - b.id);
+        for (const pr1 of pairingsOf(c1))
+          for (const pr2 of pairingsOf(c2)) consider([pr1, pr2], streak);
+      }
     }
   }
-  if (tiedSplits.length === 0) return null;
+  if (ties.length === 0) return null;
 
-  const bestSplit = tiedSplits[Math.floor(Math.random() * tiedSplits.length)];
-  const p1 = pickFairPairing(bestSplit.c1, vpairs, vopps, false);
-  const p2 = pickFairPairing(bestSplit.c2, vpairs, vopps, false);
+  const chosen = ties[Math.floor(Math.random() * ties.length)];
   return {
-    courts: [
-      { court: 1, team1: p1.team1, team2: p1.team2 },
-      { court: 2, team1: p2.team1, team2: p2.team2 },
-    ],
+    courts: chosen.map((pr, i) => ({
+      court: i + 1,
+      team1: pr.team1.map(p => p.id),
+      team2: pr.team2.map(p => p.id),
+    })),
   };
 }
 
@@ -336,23 +343,14 @@ function appendCombinations(count) {
 
   const vpairs = new Map();
   const vopps = new Map();
-  const vcm = new Map();
   for (const p of active) {
     for (const [otherIdStr, c] of Object.entries(p.pairs || {})) {
       const o = +otherIdStr;
-      if (p.id < o) {
-        const k = pairKey(p.id, o);
-        vpairs.set(k, c);
-        vcm.set(k, (vcm.get(k) || 0) + c);
-      }
+      if (p.id < o) vpairs.set(pairKey(p.id, o), c);
     }
     for (const [otherIdStr, c] of Object.entries(p.opponents || {})) {
       const o = +otherIdStr;
-      if (p.id < o) {
-        const k = pairKey(p.id, o);
-        vopps.set(k, c);
-        vcm.set(k, (vcm.get(k) || 0) + c);
-      }
+      if (p.id < o) vopps.set(pairKey(p.id, o), c);
     }
   }
 
@@ -374,9 +372,7 @@ function appendCombinations(count) {
     } else {
       const rf = computeRF(active, vg, needed);
       if (!rf) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
-      combo = numCourts === 1
-        ? nextCombo1Court(rf, vcm, vpairs, vopps, vstreak)
-        : nextCombo2Courts(rf, vcm, vpairs, vopps, vstreak);
+      combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak);
       if (!combo) { for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1); break; }
     }
 
@@ -389,12 +385,6 @@ function appendCombinations(count) {
     for (const court of combo.courts) {
       const ids = [...court.team1, ...court.team2];
       for (const id of ids) { vg.set(id, vg.get(id) + 1); playedIds.add(id); }
-      for (let a = 0; a < ids.length; a++) {
-        for (let b = a + 1; b < ids.length; b++) {
-          const k = pairKey(ids[a], ids[b]);
-          vcm.set(k, (vcm.get(k) || 0) + 1);
-        }
-      }
       const k1 = pairKey(court.team1[0], court.team1[1]);
       const k2 = pairKey(court.team2[0], court.team2[1]);
       vpairs.set(k1, (vpairs.get(k1) || 0) + 1);
