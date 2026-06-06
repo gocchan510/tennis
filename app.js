@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/6 11:00';
-const VERSION_NOTES = 'スケジューリング改善: LRU重みで同じ組み合わせの連続を防止';
+const APP_VERSION = '2026/6/6 12:00';
+const VERSION_NOTES = 'コード左に試合番号を表示';
 
 // ── State ─────────────────────────────────────────
 //
@@ -580,6 +580,11 @@ function renderCourts() {
     card.addEventListener('click', () => moveMarkerTo(idx));
 
     const body = el('div', 'combo-body');
+
+    const roundNum = el('span', 'combo-round');
+    roundNum.textContent = idx + 1;
+    body.appendChild(roundNum);
+
     const courts = el('div', 'combo-courts');
     for (const m of combo.courts) {
       courts.appendChild(makeMatchRow(m.court, m.team1, m.team2));
