@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/6 10:00';
-const VERSION_NOTES = 'UIリファクタ Step3+4: セットアップ・統計画面洗練';
+const APP_VERSION = '2026/6/6 11:00';
+const VERSION_NOTES = 'スケジューリング改善: LRU重みで同じ組み合わせの連続を防止';
 
 // ── State ─────────────────────────────────────────
 //
@@ -191,6 +191,18 @@ function cmpArr(a, b) {
   return 0;
 }
 
+// Canonical string key for a combo (works with both player objects and plain IDs).
+function comboKey(courts) {
+  const toId = x => (typeof x === 'object' ? x.id : x);
+  const courtKeys = courts.map(ct => {
+    const t1 = ct.team1.map(toId).sort((a, b) => a - b);
+    const t2 = ct.team2.map(toId).sort((a, b) => a - b);
+    const teams = [t1, t2].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    return teams.map(t => t.join('-')).join('|');
+  }).sort();
+  return courtKeys.join(';');
+}
+
 // The 3 ways to split 4 players into two teams (returns player objects).
 function pairingsOf(four) {
   const [a, b, c, d] = four;
@@ -253,7 +265,7 @@ function computeRF(active, vg, needed) {
 //   2. repeated-opponent penalty  Σ vopps²   (secondary — vary opponents when pairs repeat)
 //   3. consecutive-play penalty    Σ vstreak  (tertiary — rest long-streaked players)
 // Random among full ties → maximum variety while honoring the above.
-function nextComboFair(rf, numCourts, vpairs, vopps, vstreak) {
+function nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
   // Teammate + opponent penalty for a candidate set of courts.
@@ -270,7 +282,10 @@ function nextComboFair(rf, numCourts, vpairs, vopps, vstreak) {
 
   let bestKey = null, ties = [];
   const consider = (courts, streak) => {
-    const key = [...scorePO(courts), streak];
+    // 4th element: round index when this exact combo was last used (-1 = never).
+    // Smaller = older = preferred, so ties always resolve to the least-recently-used combo.
+    const lastUsed = vlast.get(comboKey(courts)) ?? -1;
+    const key = [...scorePO(courts), streak, lastUsed];
     if (bestKey === null || cmpArr(key, bestKey) < 0) { bestKey = key; ties = [courts]; }
     else if (cmpArr(key, bestKey) === 0) ties.push(courts);
   };
@@ -358,6 +373,14 @@ function appendCombinations(count) {
   const vstreak = new Map();
   for (const p of active) vstreak.set(p.id, 0);
 
+  // vlast: comboKey → round index of last use. Seeded from played history so
+  // the LRU ordering is global (across all past sessions in this simulation).
+  const vlast = new Map();
+  let vlastRound = 0;
+  for (const c of state.combinations) {
+    vlast.set(comboKey(c.courts), vlastRound++);
+  }
+
   let satOutLastRound = new Set();
 
   for (let i = 0; i < count; i++) {
@@ -375,11 +398,12 @@ function appendCombinations(count) {
       const rf = computeRF(active, vg, needed);
       if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
       if (!rf) break;
-      combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak);
+      combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast);
       if (!combo) break;
     }
 
     state.combinations.push(combo);
+    vlast.set(comboKey(combo.courts), vlastRound++);
 
     const playedIds = new Set();
     for (const court of combo.courts) {
