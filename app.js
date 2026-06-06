@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/5/4 10:00';
-const VERSION_NOTES = '組み合わせをペア重複優先で最適化（同じ組のループを解消）／履歴カードを縦並びに';
+const APP_VERSION = '2026/5/4 11:00';
+const VERSION_NOTES = '統計：全プレイヤーを0から表示するチップ形式に変更';
 
 // ── State ─────────────────────────────────────────
 //
@@ -741,13 +741,23 @@ function renderPlayers() {
 
 // ── Render: stats ─────────────────────────────────
 
-function formatHistory(map) {
-  const entries = Object.entries(map)
-    .filter(([, c]) => c > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-  if (entries.length === 0) return '—';
-  return entries.map(([id, c]) => `${id}番 (${c}回)`).join('　');
+// Render count chips for every other player (sorted by ID, always showing 0).
+function renderCountChips(map, allPlayers, selfId) {
+  const wrap = el('div', 'stat-count-row');
+  allPlayers
+    .filter(p => p.id !== selfId)
+    .sort((a, b) => a.id - b.id)
+    .forEach(p => {
+      const c = map[p.id] || 0;
+      const chip = el('span', 'stat-count-chip' + (c === 0 ? ' zero' : ''));
+      const num = el('span', 'stat-chip-id');
+      num.textContent = p.id;
+      const cnt = el('span', 'stat-chip-count');
+      cnt.textContent = c;
+      chip.append(num, cnt);
+      wrap.appendChild(chip);
+    });
+  return wrap;
 }
 
 function renderStats() {
@@ -785,16 +795,12 @@ function renderStats() {
     const pairRow = el('div', 'stat-row');
     const pairLabel = el('span', 'stat-row-label');
     pairLabel.textContent = 'ペア';
-    const pairVal = el('span', 'stat-row-value');
-    pairVal.textContent = formatHistory(p.pairs);
-    pairRow.append(pairLabel, pairVal);
+    pairRow.append(pairLabel, renderCountChips(p.pairs, players, p.id));
 
     const oppRow = el('div', 'stat-row');
     const oppLabel = el('span', 'stat-row-label');
     oppLabel.textContent = '対戦';
-    const oppVal = el('span', 'stat-row-value');
-    oppVal.textContent = formatHistory(p.opponents);
-    oppRow.append(oppLabel, oppVal);
+    oppRow.append(oppLabel, renderCountChips(p.opponents, players, p.id));
 
     rows.append(pairRow, oppRow);
     card.appendChild(rows);

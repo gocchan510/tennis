@@ -690,6 +690,54 @@ main {
   font-feature-settings: "tnum";
 }
 
+.stat-count-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+  align-items: center;
+}
+
+.stat-count-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 20px;
+  background: var(--court-soft);
+  border: 1px solid var(--court);
+  font-feature-settings: "tnum";
+  line-height: 1;
+}
+
+.stat-count-chip.zero {
+  background: var(--cream-soft);
+  border-color: var(--line-soft);
+}
+
+.stat-chip-id {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--court-deep);
+  letter-spacing: 0;
+}
+
+.stat-count-chip.zero .stat-chip-id {
+  color: var(--ink-faint);
+}
+
+.stat-chip-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 8px;
+  text-align: right;
+}
+
+.stat-count-chip.zero .stat-chip-count {
+  color: var(--ink-faint);
+}
+
 /* ── Setup screen ─────────────────────────── */
 
 .setup-screen {
