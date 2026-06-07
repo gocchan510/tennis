@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 12:00';
-const VERSION_NOTES = 'マッチアップ履歴の初期化を修正（生成済み分を正しく参照）';
+const APP_VERSION = '2026/6/7 12:30';
+const VERSION_NOTES = 'スケジュール精度向上（12人以下で全候補を評価）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -181,7 +181,7 @@ function sampleCombinations(arr, k, count) {
 }
 
 // Cap on subset enumeration. Above this we randomly sample to stay fast.
-const MAX_SUBSET_SAMPLES = 200;
+const MAX_SUBSET_SAMPLES = 500;
 
 function fillerSubsetsFor(filler, fillerNeeded) {
   if (fillerNeeded === 0) return [[]];
