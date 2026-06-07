@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 13:00';
-const VERSION_NOTES = '連続ペア抑制を強化（count=0ペア導入による連続を防止）';
+const APP_VERSION = '2026/6/7 14:00';
+const VERSION_NOTES = 'コンボループ修正（全15通りを均等に使用）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -272,7 +272,7 @@ function computeRF(active, vg, needed) {
 //   2. repeated-opponent penalty  Σ vopps²   (secondary — vary opponents when pairs repeat)
 //   3. consecutive-play penalty    Σ vstreak  (tertiary — rest long-streaked players)
 // Random among full ties → maximum variety while honoring the above.
-function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair, prevRound) {
+function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair, prevRound, vcomboCount) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
   // Teammate + matchup penalty for a candidate set of courts.
@@ -306,9 +306,11 @@ function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPa
       if (p1 > maxPairLast) maxPairLast = p1;
       if (p2 > maxPairLast) maxPairLast = p2;
     }
-    const lastUsed = vlast.get(comboKey(courts)) ?? -1;
+    const ck = comboKey(courts);
+    const cc = vcomboCount.get(ck) || 0;
+    const lastUsed = vlast.get(ck) ?? -1;
     const [ps, ms] = scorePO(courts);
-    const key = [consecutivePairs, ps, ms, maxPairLast, streak, lastUsed];
+    const key = [consecutivePairs, cc, ps, ms, maxPairLast, streak, lastUsed];
     if (bestKey === null || cmpArr(key, bestKey) < 0) { bestKey = key; ties = [courts]; }
     else if (cmpArr(key, bestKey) === 0) ties.push(courts);
   };
@@ -397,11 +399,17 @@ function appendCombinations(count) {
   // Tracks "pair A&B has faced pair C&D N times" — more precise than
   // individual opponent counts for doubles scheduling.
   const vmatchups = new Map();
+  // vcomboCount: how many times each full combo has been used. Seeded from all
+  // existing combos so the scheduler spreads usage across all possible combos
+  // rather than cycling through the same subset.
+  const vcomboCount = new Map();
   for (const c of state.combinations) {
     for (const court of c.courts) {
       const mk = matchupKey(court.team1[0], court.team1[1], court.team2[0], court.team2[1]);
       vmatchups.set(mk, (vmatchups.get(mk) || 0) + 1);
     }
+    const ck = comboKey(c.courts);
+    vcomboCount.set(ck, (vcomboCount.get(ck) || 0) + 1);
   }
 
   // vstreak: consecutive plays in this virtual simulation (starts at 0)
@@ -440,12 +448,14 @@ function appendCombinations(count) {
       const rf = computeRF(active, vg, needed);
       if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
       if (!rf) break;
-      combo = nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair, vlastRound - 1);
+      combo = nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair, vlastRound - 1, vcomboCount);
       if (!combo) break;
     }
 
     state.combinations.push(combo);
-    vlast.set(comboKey(combo.courts), vlastRound);
+    const ck = comboKey(combo.courts);
+    vlast.set(ck, vlastRound);
+    vcomboCount.set(ck, (vcomboCount.get(ck) || 0) + 1);
     for (const court of combo.courts) {
       vlastPair.set(pairKey(court.team1[0], court.team1[1]), vlastRound);
       vlastPair.set(pairKey(court.team2[0], court.team2[1]), vlastRound);
