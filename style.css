@@ -422,9 +422,9 @@ main {
 
 /* Team colour split: first team clear pale green, second team solid green */
 .combo-match .team:first-child .player-badge {
-  background: #e6f4ec;
+  background: #cfe6d6;
   color: var(--court-deep);
-  border-color: rgba(46,125,91,0.35);
+  border-color: rgba(46,125,91,0.40);
 }
 .combo-match .team:last-child .player-badge {
   background: var(--court);
