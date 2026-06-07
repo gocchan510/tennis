@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 11:30';
-const VERSION_NOTES = 'マッチアップ均等化を優先（ペア対ペア単位）';
+const APP_VERSION = '2026/6/7 12:00';
+const VERSION_NOTES = 'マッチアップ履歴の初期化を修正（生成済み分を正しく参照）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -389,11 +389,12 @@ function appendCombinations(count) {
     }
   }
 
-  // vmatchups: pair-vs-pair matchup counts seeded from played history.
+  // vmatchups: pair-vs-pair matchup counts seeded from all existing combos
+  // (played + previously generated), consistent with vlast/vlastPair seeding.
   // Tracks "pair A&B has faced pair C&D N times" — more precise than
   // individual opponent counts for doubles scheduling.
   const vmatchups = new Map();
-  for (const c of state.combinations.slice(0, state.markerPos)) {
+  for (const c of state.combinations) {
     for (const court of c.courts) {
       const mk = matchupKey(court.team1[0], court.team1[1], court.team2[0], court.team2[1]);
       vmatchups.set(mk, (vmatchups.get(mk) || 0) + 1);
