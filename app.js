@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/6 14:00';
-const VERSION_NOTES = 'UIリデザイン Case B: 緑+ライム+Manrope で統一';
+const APP_VERSION = '2026/6/7 09:00';
+const VERSION_NOTES = 'ライム使用を絞り込み・ドロップダウン軽量化・チーム色調整';
 
 // ── State ─────────────────────────────────────────
 //

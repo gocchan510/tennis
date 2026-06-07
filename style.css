@@ -153,14 +153,14 @@ html, body {
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(205, 232, 90, 0.70);
+  color: rgba(255, 255, 255, 0.50);
 }
 
 .player-count {
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.10em;
-  color: rgba(205, 232, 90, 0.85);
+  color: rgba(255, 255, 255, 0.72);
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -169,9 +169,9 @@ html, body {
   height: 28px;
   padding: 0 var(--sp-3);
   border-radius: 14px;
-  border: 1px solid rgba(205, 232, 90, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   background: transparent;
-  color: rgba(205, 232, 90, 0.85);
+  color: rgba(255, 255, 255, 0.72);
   font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -182,9 +182,9 @@ html, body {
               border-color var(--dur-fast) var(--ease);
 }
 .btn-reset:active {
-  background: rgba(205,232,90,0.18);
-  border-color: rgba(205,232,90,0.60);
-  color: var(--cream);
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.40);
+  color: #fff;
 }
 
 /* ── Main scroll area ─────────────────────── */
@@ -420,7 +420,12 @@ main {
   font-weight: 800;
 }
 
-/* Team colour split: first team pale green, second team solid green */
+/* Team colour split: first team clear pale green, second team solid green */
+.combo-match .team:first-child .player-badge {
+  background: #e6f4ec;
+  color: var(--court-deep);
+  border-color: rgba(46,125,91,0.35);
+}
 .combo-match .team:last-child .player-badge {
   background: var(--court);
   color: #fff;
@@ -781,10 +786,10 @@ main {
   content: '◎\00a0';
 }
 
-/* 対戦 row — lime pill */
+/* 対戦 row — muted green pill (distinct from ペア but not lime) */
 .stat-rows .stat-row:last-child .stat-row-label {
-  background: rgba(205,232,90,.28);
-  color: var(--lime-d);
+  background: rgba(46,125,91,0.10);
+  color: var(--court-mid);
 }
 .stat-rows .stat-row:last-child .stat-row-label::before {
   content: '⚔\00a0';
@@ -911,7 +916,7 @@ main {
   text-align: center;
   color: var(--court-deep);
   background-color: var(--surface);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23B08A4A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%232e7d5b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
   background-repeat: no-repeat;
   background-position: calc(100% - 14px) center;
   background-size: 12px auto;
@@ -940,46 +945,45 @@ main {
   margin-left: -50px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: var(--sp-2);
-  max-height: 300px;
+  padding: 0;
+  max-height: 280px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
   box-sizing: border-box;
 }
 .setup-popup-item {
   flex: 0 0 auto;
-  height: 44px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  height: 36px;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--court-deep);
+  color: var(--ink);
   cursor: pointer;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   padding: 0;
-  transition: background var(--dur-fast) var(--ease),
-              border-color var(--dur-fast) var(--ease),
-              transform    var(--dur-fast) var(--ease);
+  transition: background var(--dur-fast) var(--ease);
+}
+.setup-popup-item:last-child {
+  border-bottom: none;
 }
 .setup-popup-item:active {
-  transform: scale(0.94);
   background: var(--court-soft);
-  border-color: var(--court);
 }
 .setup-popup-item.selected {
-  background: var(--court);
-  border-color: var(--court);
-  color: var(--cream);
+  background: var(--court-soft);
+  color: var(--court-deep);
+  font-weight: 800;
 }
 
 .setup-unit {
@@ -1165,8 +1169,8 @@ main {
 
 .history-restore {
   font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--brass);
+  font-weight: 700;
+  color: var(--court);
   white-space: nowrap;
   flex-shrink: 0;
 }
