@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 11:00';
-const VERSION_NOTES = '対戦履歴をペア単位で管理（ペア対ペアの均等化）';
+const APP_VERSION = '2026/6/7 11:30';
+const VERSION_NOTES = 'マッチアップ均等化を優先（ペア対ペア単位）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -304,8 +304,8 @@ function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPa
     }
     // 5th element: full-combo recency (tiebreaker of last resort).
     const lastUsed = vlast.get(comboKey(courts)) ?? -1;
-    const [ps, os] = scorePO(courts);
-    const key = [ps, maxPairLast, os, streak, lastUsed];
+    const [ps, ms] = scorePO(courts);
+    const key = [ps, ms, maxPairLast, streak, lastUsed];
     if (bestKey === null || cmpArr(key, bestKey) < 0) { bestKey = key; ties = [courts]; }
     else if (cmpArr(key, bestKey) === 0) ties.push(courts);
   };
