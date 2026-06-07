@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 12:30';
-const VERSION_NOTES = 'スケジュール精度向上（12人以下で全候補を評価）';
+const APP_VERSION = '2026/6/7 13:00';
+const VERSION_NOTES = '連続ペア抑制を強化（count=0ペア導入による連続を防止）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -272,7 +272,7 @@ function computeRF(active, vg, needed) {
 //   2. repeated-opponent penalty  Σ vopps²   (secondary — vary opponents when pairs repeat)
 //   3. consecutive-play penalty    Σ vstreak  (tertiary — rest long-streaked players)
 // Random among full ties → maximum variety while honoring the above.
-function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair) {
+function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair, prevRound) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
   // Teammate + matchup penalty for a candidate set of courts.
@@ -292,20 +292,23 @@ function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPa
 
   let bestKey = null, ties = [];
   const consider = (courts, streak) => {
-    // 4th element: most-recently-used individual teammate pair (-1 = never used).
-    // Minimising this ensures that when pair counts tie, we pick the pairing
-    // whose most recently used pair was used in the oldest round.
+    // 1st element: number of pairs that were also used in the immediately
+    // preceding round. Minimising this prevents back-to-back teammate repeats
+    // even when a fresh (count=0) pair can only be introduced alongside a
+    // recently-used one (which would otherwise win on Σvpairs²).
+    let consecutivePairs = 0;
     let maxPairLast = -1;
     for (const ct of courts) {
       const p1 = vlastPair.get(pairKey(ct.team1[0].id, ct.team1[1].id)) ?? -1;
       const p2 = vlastPair.get(pairKey(ct.team2[0].id, ct.team2[1].id)) ?? -1;
+      if (p1 === prevRound) consecutivePairs++;
+      if (p2 === prevRound) consecutivePairs++;
       if (p1 > maxPairLast) maxPairLast = p1;
       if (p2 > maxPairLast) maxPairLast = p2;
     }
-    // 5th element: full-combo recency (tiebreaker of last resort).
     const lastUsed = vlast.get(comboKey(courts)) ?? -1;
     const [ps, ms] = scorePO(courts);
-    const key = [ps, ms, maxPairLast, streak, lastUsed];
+    const key = [consecutivePairs, ps, ms, maxPairLast, streak, lastUsed];
     if (bestKey === null || cmpArr(key, bestKey) < 0) { bestKey = key; ties = [courts]; }
     else if (cmpArr(key, bestKey) === 0) ties.push(courts);
   };
@@ -437,7 +440,7 @@ function appendCombinations(count) {
       const rf = computeRF(active, vg, needed);
       if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
       if (!rf) break;
-      combo = nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair);
+      combo = nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair, vlastRound - 1);
       if (!combo) break;
     }
 
