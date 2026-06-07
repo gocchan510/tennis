@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 14:00';
-const VERSION_NOTES = 'コンボループ修正（全15通りを均等に使用）';
+const APP_VERSION = '2026/6/7 15:00';
+const VERSION_NOTES = '直前休みプレイヤーの優先度を正しく引き継ぎ';
 
 // ── State ─────────────────────────────────────────
 //
@@ -432,6 +432,13 @@ function appendCombinations(count) {
   }
 
   let satOutLastRound = new Set();
+  if (state.markerPos > 0) {
+    const lastPlayed = state.combinations[state.markerPos - 1];
+    const lastPlayedIds = new Set(lastPlayed.courts.flatMap(c => [...c.team1, ...c.team2]));
+    for (const p of active) {
+      if (!lastPlayedIds.has(p.id)) satOutLastRound.add(p.id);
+    }
+  }
 
   for (let i = 0; i < count; i++) {
     // Sequential phase: assign truly-unplayed (vg=0, no boost yet) players in ID order.
