@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/6 13:00';
-const VERSION_NOTES = 'ペア単位LRUを追加: 同カウント時に個別ペアの連続も防止';
+const APP_VERSION = '2026/6/6 14:00';
+const VERSION_NOTES = 'UIリデザイン Case B: 緑+ライム+Manrope で統一';
 
 // ── State ─────────────────────────────────────────
 //
