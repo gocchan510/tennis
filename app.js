@@ -4,8 +4,8 @@ const STORAGE_KEY = 'tennis_v1';
 const HISTORY_KEY = 'tennis_history_v1';
 const MAX_HISTORY = 3;
 const MAX_COMBOS = 50;
-const APP_VERSION = '2026/6/7 10:30';
-const VERSION_NOTES = '連続ペア抑制を強化';
+const APP_VERSION = '2026/6/7 11:00';
+const VERSION_NOTES = '対戦履歴をペア単位で管理（ペア対ペアの均等化）';
 
 // ── State ─────────────────────────────────────────
 //
@@ -120,6 +120,13 @@ function activePlayers() {
 
 function pairKey(a, b) {
   return Math.min(a, b) + '-' + Math.max(a, b);
+}
+
+// Canonical key for a pair-vs-pair matchup (order-independent on both axes).
+function matchupKey(a, b, c, d) {
+  const pk1 = pairKey(a, b);
+  const pk2 = pairKey(c, d);
+  return pk1 < pk2 ? pk1 + '|' + pk2 : pk2 + '|' + pk1;
 }
 
 function pairingOpts(group) {
@@ -265,19 +272,22 @@ function computeRF(active, vg, needed) {
 //   2. repeated-opponent penalty  Σ vopps²   (secondary — vary opponents when pairs repeat)
 //   3. consecutive-play penalty    Σ vstreak  (tertiary — rest long-streaked players)
 // Random among full ties → maximum variety while honoring the above.
-function nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast, vlastPair) {
+function nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair) {
   const fillerSubsets = fillerSubsetsFor(rf.filler, rf.fillerNeeded);
 
-  // Teammate + opponent penalty for a candidate set of courts.
+  // Teammate + matchup penalty for a candidate set of courts.
+  // Uses pair-vs-pair matchup counts (not individual opponent counts) so that
+  // "1&2 vs 3&4" and "1&3 vs 2&4" are tracked separately even if the same
+  // individuals have already faced each other in other combinations.
   const scorePO = (courts) => {
-    let ps = 0, os = 0;
+    let ps = 0, ms = 0;
     for (const ct of courts) {
       ps += sq(vpairs.get(pairKey(ct.team1[0].id, ct.team1[1].id)))
           + sq(vpairs.get(pairKey(ct.team2[0].id, ct.team2[1].id)));
-      for (const a of ct.team1) for (const b of ct.team2)
-        os += sq(vopps.get(pairKey(a.id, b.id)));
+      ms += sq(vmatchups.get(matchupKey(ct.team1[0].id, ct.team1[1].id,
+                                        ct.team2[0].id, ct.team2[1].id)));
     }
-    return [ps, os];
+    return [ps, ms];
   };
 
   let bestKey = null, ties = [];
@@ -367,7 +377,7 @@ function appendCombinations(count) {
   for (const p of active) vg.set(p.id, p.games);
 
   const vpairs = new Map();
-  const vopps = new Map();
+  const vopps = new Map(); // kept for pickFairPairing (sequential opener)
   for (const p of active) {
     for (const [otherIdStr, c] of Object.entries(p.pairs || {})) {
       const o = +otherIdStr;
@@ -376,6 +386,17 @@ function appendCombinations(count) {
     for (const [otherIdStr, c] of Object.entries(p.opponents || {})) {
       const o = +otherIdStr;
       if (p.id < o) vopps.set(pairKey(p.id, o), c);
+    }
+  }
+
+  // vmatchups: pair-vs-pair matchup counts seeded from played history.
+  // Tracks "pair A&B has faced pair C&D N times" — more precise than
+  // individual opponent counts for doubles scheduling.
+  const vmatchups = new Map();
+  for (const c of state.combinations.slice(0, state.markerPos)) {
+    for (const court of c.courts) {
+      const mk = matchupKey(court.team1[0], court.team1[1], court.team2[0], court.team2[1]);
+      vmatchups.set(mk, (vmatchups.get(mk) || 0) + 1);
     }
   }
 
@@ -415,7 +436,7 @@ function appendCombinations(count) {
       const rf = computeRF(active, vg, needed);
       if (doBoost) for (const id of satOutLastRound) vg.set(id, vg.get(id) + 1);
       if (!rf) break;
-      combo = nextComboFair(rf, numCourts, vpairs, vopps, vstreak, vlast, vlastPair);
+      combo = nextComboFair(rf, numCourts, vpairs, vmatchups, vstreak, vlast, vlastPair);
       if (!combo) break;
     }
 
@@ -441,6 +462,8 @@ function appendCombinations(count) {
           vopps.set(k, (vopps.get(k) || 0) + 1);
         }
       }
+      const mk = matchupKey(court.team1[0], court.team1[1], court.team2[0], court.team2[1]);
+      vmatchups.set(mk, (vmatchups.get(mk) || 0) + 1);
     }
 
     // Update vstreak: played → +1, sat out → reset to 0
